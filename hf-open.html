@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMU - HF Open & Closed Status</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS library for in-browser Excel export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f8fafc;
+        }
+
+        #sidebar {
+            width: 250px;
+            height: 100vh;
+            position: fixed;
+            background-color: #0f172a;
+            color: #fff;
+        }
+
+        #sidebar ul li a {
+            padding: 12px 20px;
+            display: block;
+            color: #cbd5e1;
+            text-decoration: none;
+        }
+
+        #sidebar ul li.active a {
+            color: #fff;
+            background: #1e293b;
+            border-left: 4px solid #0d9488;
+        }
+
+        #content {
+            margin-left: 250px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 320px;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        /* Custom Modal Styles */
+        .custom-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(2px);
+            z-index: 1050;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .custom-modal-overlay.active {
+            display: flex;
+        }
+
+        .custom-modal-box {
+            background: #fff;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            animation: modalFadeIn 0.2s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav id="sidebar">
+        <div class="p-3 bg-primary text-white fw-bold">MMU Portal</div>
+        <ul class="list-unstyled mt-2">
+            <li><a href="index.html"><i class="fa-solid fa-chart-line"></i> Main Dashboard</a></li>
+            <li class="active"><a href="hf-open.html"><i class="fa-solid fa-door-open"></i> 1. HF Open/Closed</a></li>
+            <li><a href="mo-wmo.html"><i class="fa-solid fa-user-doctor"></i> 2. MO/WMO</a></li>
+            <li><a href="labor-room.html"><i class="fa-solid fa-baby"></i> 3. Labor Room</a></li>
+            <li><a href="medicine.html"><i class="fa-solid fa-pills"></i> 4. Medicine</a></li>
+            <li><a href="anc-pnc.html"><i class="fa-solid fa-person-breastfeeding"></i> 5. ANC/PNC</a></li>
+            <li><a href="family-plan.html"><i class="fa-solid fa-people-roof"></i> 6. Family Plan</a></li>
+            <li><a href="epi.html"><i class="fa-solid fa-syringe"></i> 7. EPI</a></li>
+        </ul>
+    </nav>
+
+    <div id="content" class="p-4">
+        <h4 class="fw-bold mb-4">Health Facility (HF) Status Dashboard</h4>
+
+        <!-- Regional Comparison Chart Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card p-3 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold text-dark m-0">
+                            <i class="fa-solid fa-chart-column me-2 text-primary"></i>Regional Comparison: Open vs
+                            Closed Facilities
+                        </h6>
+                        
+                        <!-- Export Button above Closed HF Table -->
+                        <button class="btn btn-sm btn-outline-success ms-auto"
+                            onclick="exportTableToExcel('closedTableBody', 'Closed_Facilities_Data')">
+                            <i class="fa-solid fa-file-excel me-1"></i> Export Excel
+                        </button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="hfComparisonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- HF Open Table -->
+            <div class="col-lg-5">
+                <div class="card p-3 h-100 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-success mb-0"><i class="fa-solid fa-door-open me-2"></i>Health Facility
+                            Open</h6>
+                            <!-- Export Button above Closed HF Table -->
+                        <button class="btn btn-sm btn-outline-success ms-auto"
+                            onclick="exportTableToExcel('closedTableBody', 'Closed_Facilities_Data')">
+                            <i class="fa-solid fa-file-excel me-1"></i> Export Excel
+                        </button>
+                    </div>
+                    
+                    <!-- Search Control -->
+                    <div class="input-group input-group-sm mb-3">
+                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" id="openSearchInput" class="form-control"
+                            placeholder="Search facility or district..."
+                            onkeyup="filterTable('openSearchInput', 'openTableBody')">
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Facility Name</th>
+                                    <th>District</th>
+                                    <th>Opening Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="openTableBody">
+                                <tr>
+                                    <td>BHU Central</td>
+                                    <td>District North</td>
+                                    <td>08:00 AM</td>
+                                    <td><span class="badge bg-success">Open</span></td>
+                                </tr>
+                                <tr>
+                                    <td>RHC Alpine</td>
+                                    <td>District North</td>
+                                    <td>07:45 AM</td>
+                                    <td><span class="badge bg-success">Open</span></td>
+                                </tr>
+                                <tr>
+                                    <td>BHU South Main</td>
+                                    <td>District South</td>
+                                    <td>08:00 AM</td>
+                                    <td><span class="badge bg-success">Open</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HF Closed Table with Evidence File Column -->
+            <div class="col-lg-7">
+                <div class="card p-3 h-100 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-danger mb-0"><i class="fa-solid fa-door-closed me-2"></i>Health Facility
+                            Closed</h6>
+                            <!-- Export Button above Closed HF Table -->
+                        <button class="btn btn-sm btn-outline-success ms-auto"
+                            onclick="exportTableToExcel('closedTableBody', 'Closed_Facilities_Data')">
+                            <i class="fa-solid fa-file-excel me-1"></i> Export Excel
+                        </button>
+                    </div>
+                    <!-- Search Control -->
+                    <div class="input-group input-group-sm mb-3">
+                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" id="closedSearchInput" class="form-control"
+                            placeholder="Search facility, district, or reason..."
+                            onkeyup="filterTable('closedSearchInput', 'closedTableBody')">
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Facility Name</th>
+                                    <th>District</th>
+                                    <th>Status</th>
+                                    <th>Reason</th>
+                                    <th>Evidence File</th>
+                                </tr>
+                            </thead>
+                            <tbody id="closedTableBody">
+                                <tr>
+                                    <td>RHC East</td>
+                                    <td>District South</td>
+                                    <td><span class="badge bg-danger">Closed</span></td>
+                                    <td>Staff Shortage / Maintenance</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <a href="#" class="btn btn-sm btn-outline-primary py-0 px-2"
+                                                title="View attached document">
+                                                <i class="fa-solid fa-paperclip"></i> View
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>BHU Valley</td>
+                                    <td>District North</td>
+                                    <td><span class="badge bg-danger">Closed</span></td>
+                                    <td>Heavy Rain / Access Road Blocked</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <a href="#" class="btn btn-sm btn-outline-primary py-0 px-2"
+                                                title="View image evidence">
+                                                <i class="fa-solid fa-image"></i> View
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>BHU Sunridge</td>
+                                    <td>District East</td>
+                                    <td><span class="badge bg-danger">Closed</span></td>
+                                    <td>Medicine Stockout Inspection</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <a href="#" class="btn btn-sm btn-outline-primary py-0 px-2"
+                                                title="View image evidence">
+                                                <i class="fa-solid fa-image"></i> View
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal Popup for Region Details with Evidence Column -->
+    <div class="custom-modal-overlay" id="pureJsModal">
+        <div class="custom-modal-box">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold m-0" id="modalTitle">Region Details</h5>
+                <button type="button" class="btn-close" onclick="closePureJsModal()"></button>
+            </div>
+            <div class="p-3 overflow-auto" style="max-height: 60vh;">
+                <!-- Modal Search Filter -->
+                <div class="input-group input-group-sm mb-3">
+                    <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" id="modalSearchInput" class="form-control"
+                        placeholder="Filter regional facilities..."
+                        onkeyup="filterTable('modalSearchInput', 'modalTableBody')">
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead id="modalTableHead"></thead>
+                        <tbody id="modalTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="p-3 border-top text-end">
+                <button type="button" class="btn btn-secondary" onclick="closePureJsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Store Data with Evidence File Info
+        const regionDetailsData = {
+            'North Region': {
+                'Open': [
+                    { name: 'BHU North 1', district: 'District North', time: '08:00 AM' },
+                    { name: 'BHU North 2', district: 'District North', time: '08:15 AM' },
+                    { name: 'RHC Alpine', district: 'District North', time: '07:45 AM' }
+                ],
+                'Closed': [
+                    { name: 'BHU Valley', district: 'District North', reason: 'Heavy Rain / Access Road Blocked', evidence: 'road_blocked_photo.jpg' },
+                    { name: 'Dispensary 4', district: 'District North', reason: 'MO on Duty Training', evidence: 'training_order.pdf' }
+                ]
+            },
+            'South Region': {
+                'Open': [
+                    { name: 'BHU South Main', district: 'District South', time: '08:00 AM' },
+                    { name: 'BHU Coastal', district: 'District South', time: '08:30 AM' }
+                ],
+                'Closed': [
+                    { name: 'RHC South East', district: 'District South', reason: 'Staff Shortage', evidence: 'leave_application.pdf' },
+                    { name: 'BHU Creek', district: 'District South', reason: 'Building Renovation', evidence: 'renovation_notice.pdf' }
+                ]
+            },
+            'East Region': {
+                'Open': [{ name: 'BHU East City', district: 'District East', time: '08:00 AM' }],
+                'Closed': [{ name: 'BHU Sunridge', district: 'District East', reason: 'Medicine Stockout Inspection', evidence: null }]
+            },
+            'West Region': {
+                'Open': [{ name: 'RHC West Ridge', district: 'District West', time: '08:00 AM' }],
+                'Closed': [{ name: 'BHU Outpost West', district: 'District West', reason: 'Power Outage', evidence: 'outage_report.png' }]
+            },
+            'Central Region': {
+                'Open': [{ name: 'BHU Metro', district: 'District Central', time: '08:00 AM' }],
+                'Closed': [{ name: 'Dispensary Central', district: 'District Central', reason: 'Doctor Leave', evidence: null }]
+            },
+            'Capital Region': {
+                'Open': [{ name: 'BHU Sector 1', district: 'Capital Zone', time: '08:00 AM' }],
+                'Closed': [{ name: 'BHU Sector 9', district: 'Capital Zone', reason: 'Scheduled Sanitation', evidence: 'sanitation_schedule.pdf' }]
+            }
+        };
+
+        // Render Chart
+        const ctx = document.getElementById('hfComparisonChart').getContext('2d');
+        const hfChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['North Region', 'South Region', 'East Region', 'West Region', 'Central Region', 'Capital Region'],
+                datasets: [
+                    {
+                        label: 'Open Facilities',
+                        data: [42, 35, 28, 50, 45, 38],
+                        backgroundColor: '#198754',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Closed Facilities',
+                        data: [8, 12, 15, 5, 10, 4],
+                        backgroundColor: '#dc3545',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            footer: () => 'Click bar to view facility list'
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Number of Facilities' }
+                    }
+                },
+                onClick: (event, activeElements) => {
+                    if (activeElements.length > 0) {
+                        const clickedElement = activeElements[0];
+                        const regionIndex = clickedElement.index;
+                        const datasetIndex = clickedElement.datasetIndex;
+
+                        const regionName = hfChart.data.labels[regionIndex];
+                        const statusType = datasetIndex === 0 ? 'Open' : 'Closed';
+
+                        openPureJsModal(regionName, statusType);
+                    }
+                }
+            }
+        });
+
+        // Instant Filter Function for Tables
+        function filterTable(inputId, tableBodyId) {
+            const input = document.getElementById(inputId);
+            const filter = input.value.toLowerCase();
+            const tbody = document.getElementById(tableBodyId);
+            const rows = tbody.getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const text = rows[i].textContent || rows[i].innerText;
+                if (text.toLowerCase().indexOf(filter) > -1) {
+                    rows[i].style.display = '';
+                } else {
+                    rows[i].style.display = 'none';
+                }
+            }
+        }
+
+        // Open Modal Function with Evidence Column Handling
+        function openPureJsModal(region, status) {
+            const modalTitle = document.getElementById('modalTitle');
+            const tableHead = document.getElementById('modalTableHead');
+            const tableBody = document.getElementById('modalTableBody');
+            document.getElementById('modalSearchInput').value = '';
+
+            modalTitle.innerHTML = `<span class="badge ${status === 'Open' ? 'bg-success' : 'bg-danger'} me-2">${status}</span> ${region} Facilities Details`;
+
+            const facilities = (regionDetailsData[region] && regionDetailsData[region][status]) ? regionDetailsData[region][status] : [];
+
+            if (status === 'Open') {
+                tableHead.innerHTML = `
+                    <tr>
+                        <th>Facility Name</th>
+                        <th>District</th>
+                        <th>Opening Time</th>
+                        <th>Status</th>
+                    </tr>
+                `;
+                tableBody.innerHTML = facilities.length > 0 ? facilities.map(item => `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>${item.district}</td>
+                        <td>${item.time}</td>
+                        <td><span class="badge bg-success">Open</span></td>
+                    </tr>
+                `).join('') : `<tr><td colspan="4" class="text-center text-muted">No facility records found.</td></tr>`;
+            } else {
+                tableHead.innerHTML = `
+                    <tr>
+                        <th>Facility Name</th>
+                        <th>District</th>
+                        <th>Status</th>
+                        <th>Reason for Closure</th>
+                        <th>Evidence File</th>
+                    </tr>
+                `;
+                tableBody.innerHTML = facilities.length > 0 ? facilities.map(item => `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>${item.district}</td>
+                        <td><span class="badge bg-danger">Closed</span></td>
+                        <td>${item.reason}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-1">
+                                ${item.evidence ? `
+                                    <a href="#" class="btn btn-sm btn-outline-primary py-0 px-2" title="View attached document">
+                                        <i class="fa-solid fa-paperclip"></i> ${item.evidence}
+                                    </a>
+                                ` : ''}
+                                <input type="file" class="form-control form-control-sm" accept="image/*,.pdf,.doc,.docx" style="max-width: 140px;">
+                            </div>
+                        </td>
+                    </tr>
+                `).join('') : `<tr><td colspan="5" class="text-center text-muted">No facility records found.</td></tr>`;
+            }
+
+            document.getElementById('pureJsModal').classList.add('active');
+        }
+
+        function closePureJsModal() {
+            document.getElementById('pureJsModal').classList.remove('active');
+        }
+
+        document.getElementById('pureJsModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closePureJsModal();
+            }
+        });
+        
+        // excel file data
+        function exportTableToExcel(tableBodyId, filename) {
+    const tableBody = document.getElementById(tableBodyId);
+    const rows = tableBody.getElementsByTagName('tr');
+    
+    // Prepare Data Array
+    let data = [];
+    
+    // Determine headers based on target table
+    if (tableBodyId === 'openTableBody') {
+        data.push(['Facility Name', 'District', 'Opening Time', 'Status']);
+    } else {
+        data.push(['Facility Name', 'District', 'Status', 'Reason', 'Evidence File']);
+    }
+
+    for (let i = 0; i < rows.length; i++) {
+        // Skip hidden rows if filtered
+        if (rows[i].style.display === 'none') continue;
+
+        let rowData = [];
+        const cells = rows[i].getElementsByTagName('td');
+        for (let j = 0; j < cells.length; j++) {
+            rowData.push(cells[j].innerText.trim().replace(/\n/g, ' '));
+        }
+        data.push(rowData);
+    }
+
+    // Build Worksheet and Workbook
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Facilities");
+
+    // Trigger Download
+    XLSX.writeFile(workbook, `${filename}.xlsx`);
+}
+    </script>
+</body>
+
+</html>

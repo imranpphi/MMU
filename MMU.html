@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMU - Ministry Monitors Unit Dashboard</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --sidebar-width: 250px;
+            --primary-teal: #0d9488;
+            --dark-navy: #0f172a;
+            --sidebar-hover: #1e293b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Styling */
+        #sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: var(--dark-navy);
+            color: #fff;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        #sidebar .sidebar-header {
+            padding: 20px;
+            background: #0284c7;
+            color: white;
+            font-weight: bold;
+        }
+
+        #sidebar ul.components {
+            padding: 10px 0;
+        }
+
+        #sidebar ul li a {
+            padding: 12px 20px;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        #sidebar ul li a i {
+            margin-right: 12px;
+            width: 20px;
+            text-align: center;
+        }
+
+        #sidebar ul li a:hover, #sidebar ul li.active a {
+            color: #fff;
+            background: var(--sidebar-hover);
+            border-left-color: var(--primary-teal);
+        }
+
+        /* Main Content Layout */
+        #content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            transition: all 0.3s;
+        }
+
+        /* Top Navbar */
+        .top-navbar {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 24px;
+        }
+
+        /* Custom Cards & Visuals */
+        .card {
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .stat-card {
+            border-left: 4px solid var(--primary-teal);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 280px;
+            width: 100%;
+        }
+
+        .badge-status {
+            font-size: 0.75rem;
+            padding: 5px 10px;
+            border-radius: 12px;
+        }
+
+        /* Hide Tab Sections by default */
+        .tab-section {
+            display: none;
+        }
+        .tab-section.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <nav id="sidebar">
+        <div class="sidebar-header d-flex align-items-center">
+            <i class="fa-solid fa-hospital-user fa-2x me-2"></i>
+            <div>
+                <h5 class="m-0 p-0 fw-bold">MMU Portal</h5>
+                <small style="font-size: 0.75rem;">Ministry Monitors Unit</small>
+            </div>
+        </div>
+
+        <ul class="list-unstyled components">
+            <li class="active">
+                <a href="#" onclick="switchTab('hf-open', this)">
+                    <i class="fa-solid fa-door-open text-success"></i> 1. HF Open Status
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="switchTab('mo-wmo', this)">
+                    <i class="fa-solid fa-user-doctor text-info"></i> 2. MO / WMO Attendance
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="switchTab('labor-room', this)">
+                    <i class="fa-solid fa-baby text-warning"></i> 3. Labor Room Status
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="switchTab('medicine', this)">
+                    <i class="fa-solid fa-pills text-danger"></i> 4. Medicine Availability
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="switchTab('anc-pnc', this)">
+                    <i class="fa-solid fa-person-breastfeeding text-primary"></i> 5. ANC / PNC Services
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="switchTab('family-plan', this)">
+                    <i class="fa-solid fa-people-roof text-secondary"></i> 6. Family Planning
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="switchTab('tbc', this)">
+                    <i class="fa-solid fa-lungs text-success"></i> 7. TB Control (TBC)
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="switchTab('epi', this)">
+                    <i class="fa-solid fa-syringe text-info"></i> 8. Immunization / EPI
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div id="content">
+        <!-- Top Navbar Header -->
+        <header class="top-navbar d-flex justify-content-between align-items-center sticky-top">
+            <div class="d-flex align-items-center gap-3">
+                <h5 class="m-0 text-dark fw-bold" id="currentTabTitle">HF Open Status</h5>
+                <span class="badge bg-success-subtle text-success border border-success-subtle">System Live</span>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <select class="form-select form-select-sm" style="width: 160px;" id="districtFilter">
+                    <option selected>All Districts</option>
+                    <option>District North</option>
+                    <option>District South</option>
+                    <option>District Central</option>
+                    <option>District East</option>
+                </select>
+                
+                <input type="date" class="form-control form-control-sm" value="2026-11-03">
+
+                <button class="btn btn-sm btn-outline-secondary position-relative">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
+                </button>
+
+                <div class="d-flex align-items-center gap-2 border-start ps-3">
+                    <i class="fa-solid fa-circle-user fa-2x text-secondary"></i>
+                    <div class="lh-1 d-none d-md-block">
+                        <small class="fw-bold d-block">Dr. A. Khan</small>
+                        <small class="text-muted" style="font-size: 0.75rem;">Chief Inspector</small>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Body Wrapper -->
+        <main class="p-4">
+            
+            <!-- Global Overview Stat Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card stat-card p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted fw-bold">TOTAL HEALTH FACILITIES</small>
+                                <h3 class="fw-bold m-0 mt-1">1,420</h3>
+                            </div>
+                            <div class="bg-light p-3 rounded-circle text-success">
+                                <i class="fa-solid fa-hospital fa-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card p-3 border-start border-4 border-info">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted fw-bold">ACTIVE INSPECTORS</small>
+                                <h3 class="fw-bold m-0 mt-1">184</h3>
+                            </div>
+                            <div class="bg-light p-3 rounded-circle text-info">
+                                <i class="fa-solid fa-clipboard-user fa-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card p-3 border-start border-4 border-warning">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted fw-bold">MO/WMO PRESENT TODAY</small>
+                                <h3 class="fw-bold m-0 mt-1">87.4%</h3>
+                            </div>
+                            <div class="bg-light p-3 rounded-circle text-warning">
+                                <i class="fa-solid fa-user-check fa-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card p-3 border-start border-4 border-danger">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted fw-bold">MEDICINE STOCKOUT ALERTS</small>
+                                <h3 class="fw-bold m-0 mt-1">14</h3>
+                            </div>
+                            <div class="bg-light p-3 rounded-circle text-danger">
+                                <i class="fa-solid fa-triangle-exclamation fa-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 1: HF OPEN -->
+            <section id="hf-open" class="tab-section active">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-8">
+                        <div class="card p-3">
+                            <h6 class="fw-bold mb-3">Health Facility Open Status by District</h6>
+                            <div class="chart-container">
+                                <canvas id="chartHfOpen"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card p-3">
+                            <h6 class="fw-bold mb-3">Overall Functional Rate</h6>
+                            <div class="chart-container">
+                                <canvas id="chartHfDonut"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold m-0">Facility Operations Inspection Log</h6>
+                        <button class="btn btn-sm btn-outline-primary" onclick="triggerToast()"><i class="fa-solid fa-download me-1"></i> Export Log</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Facility Name</th>
+                                    <th>District</th>
+                                    <th>Opening Time</th>
+                                    <th>Status</th>
+                                    <th>Biometric Lock</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>BHU Shahdara</td>
+                                    <td>District North</td>
+                                    <td>08:05 AM</td>
+                                    <td><span class="badge bg-success badge-status">Open & Functional</span></td>
+                                    <td><i class="fa-solid fa-circle-check text-success me-1"></i> Verified</td>
+                                    <td><button class="btn btn-sm btn-light border" data-bs-toggle="modal" data-bs-target="#inspectModal">Inspect</button></td>
+                                </tr>
+                                <tr>
+                                    <td>RHC Model Town</td>
+                                    <td>District South</td>
+                                    <td>08:15 AM</td>
+                                    <td><span class="badge bg-success badge-status">Open & Functional</span></td>
+                                    <td><i class="fa-solid fa-circle-check text-success me-1"></i> Verified</td>
+                                    <td><button class="btn btn-sm btn-light border" data-bs-toggle="modal" data-bs-target="#inspectModal">Inspect</button></td>
+                                </tr>
+                                <tr>
+                                    <td>DHQ Sector 4</td>
+                                    <td>District East</td>
+                                    <td>--:--</td>
+                                    <td><span class="badge bg-danger badge-status">Closed / Unreported</span></td>
+                                    <td><i class="fa-solid fa-circle-xmark text-danger me-1"></i> Failed</td>
+                                    <td><button class="btn btn-sm btn-light border" data-bs-toggle="modal" data-bs-target="#inspectModal">Inspect</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: MO / WMO ATTENDANCE -->
+            <section id="mo-wmo" class="tab-section">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="card p-3">
+                            <h6 class="fw-bold mb-3">Medical Officer (MO) Presence Trend</h6>
+                            <div class="chart-container">
+                                <canvas id="chartMoTrend"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card p-3">
+                            <h6 class="fw-bold mb-3">Women Medical Officer (WMO) Duty Coverage</h6>
+                            <div class="chart-container">
+                                <canvas id="chartWmoCoverage"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card p-3">
+                    <h6 class="fw-bold mb-3">Roster & Attendance Breakdown</h6>
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Doctor Name</th>
+                                <th>Role</th>
+                                <th>Assigned Facility</th>
+                                <th>Check-in Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Dr. Fatima Noor</td>
+                                <td>WMO</td>
+                                <td>RHC North Cantonment</td>
+                                <td>07:58 AM</td>
+                                <td><span class="badge bg-success">On Duty</span></td>
+                            </tr>
+                            <tr>
+                                <td>Dr. Usman Tariq</td>
+                                <td>MO</td>
+                                <td>BHU Green Park</td>
+                                <td>08:12 AM</td>
+                                <td><span class="badge bg-success">On Duty</span></td>
+                            </tr>
+                            <tr>
+                                <td>Dr. Zainab Ahmed</td>
+                                <td>WMO</td>
+                                <td>BHU West End</td>
+                                <td>--</td>
+                                <td><span class="badge bg-warning text-dark">Absent / Leave</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 3: LABOR ROOM -->
+            <section id="labor-room" class="tab-section">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card p-3 text-center">
+                            <small class="text-muted fw-bold">DELIVERIES CONDUCTED TODAY</small>
+                            <h2 class="fw-bold text-primary mt-2">142</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card p-3 text-center">
+                            <small class="text-muted fw-bold">24/7 LABOR ROOM FUNCTIONALITY</small>
+                            <h2 class="fw-bold text-success mt-2">94.2%</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card p-3 text-center">
+                            <small class="text-muted fw-bold">CRITICAL REFERRALS</small>
+                            <h2 class="fw-bold text-danger mt-2">8</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="card p-3">
+                    <h6 class="fw-bold mb-3">Labor Room Equipment Readiness</h6>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Facility</th>
+                                    <th>Resuscitation Kit</th>
+                                    <th>Oxygen Cylinder</th>
+                                    <th>Steri-Equip</th>
+                                    <th>LHV Availability</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>MCH Center Zone 1</td>
+                                    <td><i class="fa-solid fa-check text-success"></i> Ready</td>
+                                    <td><i class="fa-solid fa-check text-success"></i> Filled</td>
+                                    <td><i class="fa-solid fa-check text-success"></i> Ready</td>
+                                    <td><span class="badge bg-success">Present</span></td>
+                                </tr>
+                                <tr>
+                                    <td>RHC Satellite</td>
+                                    <td><i class="fa-solid fa-xmark text-danger"></i> Missing Part</td>
+                                    <td><i class="fa-solid fa-check text-success"></i> Filled</td>
+                                    <td><i class="fa-solid fa-check text-success"></i> Ready</td>
+                                    <td><span class="badge bg-success">Present</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: MEDICINE -->
+            <section id="medicine" class="tab-section">
+                <div class="card p-3 mb-4">
+                    <h6 class="fw-bold mb-3">Essential Medicines Stock Status (Days of Stock Left)</h6>
+                    <div class="chart-container">
+                        <canvas id="chartMedicine"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: ANC/PNC -->
+            <section id="anc-pnc" class="tab-section">
+                <div class="card p-3 mb-4">
+                    <h6 class="fw-bold mb-3">Antenatal (ANC) & Postnatal (PNC) Coverage Metrics</h6>
+                    <div class="chart-container">
+                        <canvas id="chartAncPnc"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: FAMILY PLAN -->
+            <section id="family-plan" class="tab-section">
+                <div class="card p-3">
+                    <h6 class="fw-bold mb-3">Family Planning Services & Contraceptive Distribution</h6>
+                    <p class="text-muted">Tracking commodity availability and field worker counseling reports across regions.</p>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 bg-light">
+                                <h6 class="fw-bold text-secondary">IUCD & Implant Availability</h6>
+                                <h3 class="fw-bold text-dark">91%</h3>
+                                <small class="text-success"><i class="fa-solid fa-arrow-up"></i> 3% from last month</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 bg-light">
+                                <h6 class="fw-bold text-secondary">Counseled Clients (Monthly)</h6>
+                                <h3 class="fw-bold text-dark">12,450</h3>
+                                <small class="text-success"><i class="fa-solid fa-arrow-up"></i> 8% target growth</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 7: TBC -->
+            <section id="tbc" class="tab-section">
+                <div class="card p-3">
+                    <h6 class="fw-bold mb-3">TB Control Program (DOTS Center Tracking)</h6>
+                    <div class="alert alert-info">
+                        <i class="fa-solid fa-circle-info me-2"></i> All registered DOTS centers have received Q4 ATT (Anti-Tuberculosis Treatment) medication kits.
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Center Name</th>
+                                <th>Active DOTS Patients</th>
+                                <th>Sputum Microscopy Kits</th>
+                                <th>Treatment Success Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>TBC Clinic Central</td>
+                                <td>410</td>
+                                <td><span class="badge bg-success">Sufficient</span></td>
+                                <td>94%</td>
+                            </tr>
+                            <tr>
+                                <td>DHQ Sub-Unit B</td>
+                                <td>185</td>
+                                <td><span class="badge bg-warning text-dark">Low Reserve</span></td>
+                                <td>89%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 8: EPI -->
+            <section id="epi" class="tab-section">
+                <div class="card p-3">
+                    <h6 class="fw-bold mb-3">Expanded Program on Immunization (EPI) & Cold Chain Status</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded">
+                                <small class="text-muted">Cold Chain Fridge Temp</small>
+                                <h4 class="fw-bold text-success">+4°C (Normal)</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded">
+                                <small class="text-muted">EPI Staff Attendance</small>
+                                <h4 class="fw-bold text-primary">96.8%</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded">
+                                <small class="text-muted">Pentavalent Coverage Rate</small>
+                                <h4 class="fw-bold text-info">91.5%</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Inspection Modal -->
+    <div class="modal fade" id="inspectModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Facility Detailed Inspection</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Facility:</strong> BHU Shahdara</p>
+                    <p><strong>Inspector Assigned:</strong> Monitor Code #402</p>
+                    <p><strong>Last Sync:</strong> Today, 08:05 AM</p>
+                    <hr>
+                    <h6>Inspector Notes:</h6>
+                    <p class="text-muted">Facility opened punctually. Cleanliness verified. Solar power backup fully operational.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="triggerToast()" data-bs-dismiss="modal">Flag Issue</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Toast Component -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="actionToast" class="toast align-items-center text-bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fa-solid fa-circle-check text-success me-2"></i> Action logged and exported to Ministry database.
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // Tab Switching Logic
+        function switchTab(tabId, element) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-section').forEach(el => el.classList.remove('active'));
+            // Remove active class from menu items
+            document.querySelectorAll('#sidebar ul li').forEach(el => el.classList.remove('active'));
+            
+            // Show selected tab & set active state
+            document.getElementById(tabId).classList.add('active');
+            element.parentElement.classList.add('active');
+
+            // Update top header title
+            document.getElementById('currentTabTitle').innerText = element.innerText.trim();
+        }
+
+        // Toast Trigger Helper
+        function triggerToast() {
+            const toastEl = document.getElementById('actionToast');
+            const toast = new bootstrap.Toast(toastEl);
+            toast.show();
+        }
+
+        // --- Chart Initialization ---
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            // 1. HF Open Bar Chart
+            new Chart(document.getElementById('chartHfOpen'), {
+                type: 'bar',
+                data: {
+                    labels: ['District North', 'District South', 'District Central', 'District East', 'District West'],
+                    datasets: [
+                        { label: 'Open', data: [140, 195, 210, 180, 160], backgroundColor: '#0d9488' },
+                        { label: 'Closed', data: [10, 5, 12, 8, 15], backgroundColor: '#ef4444' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 2. HF Open Donut Chart
+            new Chart(document.getElementById('chartHfDonut'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Functional (94%)', 'Closed/Unreported (6%)'],
+                    datasets: [{
+                        data: [94, 6],
+                        backgroundColor: ['#0d9488', '#ef4444']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 3. MO Trend Line Chart
+            new Chart(document.getElementById('chartMoTrend'), {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+                    datasets: [{
+                        label: 'MO Attendance %',
+                        data: [85, 88, 87, 91, 89, 86],
+                        borderColor: '#0284c7',
+                        tension: 0.3,
+                        fill: false
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 4. WMO Coverage Bar Chart
+            new Chart(document.getElementById('chartWmoCoverage'), {
+                type: 'bar',
+                data: {
+                    labels: ['Zone A', 'Zone B', 'Zone C', 'Zone D'],
+                    datasets: [{
+                        label: 'WMO Present',
+                        data: [45, 52, 38, 48],
+                        backgroundColor: '#3b82f6'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 5. Medicine Stock Chart
+            new Chart(document.getElementById('chartMedicine'), {
+                type: 'bar',
+                data: {
+                    labels: ['Paracetamol', 'Amoxicillin', 'ORS Packets', 'Iron Supps', 'Insulin'],
+                    datasets: [{
+                        label: 'Days of Stock Remaining',
+                        data: [45, 12, 60, 25, 8],
+                        backgroundColor: ['#0d9488', '#f59e0b', '#0d9488', '#0d9488', '#ef4444']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 6. ANC / PNC Chart
+            new Chart(document.getElementById('chartAncPnc'), {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [
+                        { label: 'ANC 1st Visit', data: [1200, 1350, 1280, 1420], borderColor: '#0d9488' },
+                        { label: 'PNC Follow-up', data: [800, 890, 920, 980], borderColor: '#8b5cf6' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+        });
+    </script>
+</body>
+</html>

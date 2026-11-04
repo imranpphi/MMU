@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMU - MO & WMO Attendance</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome 6 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --teal-color: #0d9488;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8fafc;
+            color: #334155;
+        }
+
+        #sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            background-color: var(--sidebar-bg);
+            color: #fff;
+            z-index: 1000;
+        }
+
+        #sidebar .sidebar-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            font-weight: bold;
+        }
+
+        #sidebar ul li a {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            color: #94a3b8;
+            text-decoration: none;
+            border-left: 4px solid transparent;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        #sidebar ul li.active a, #sidebar ul li a:hover {
+            color: #fff;
+            background: var(--sidebar-hover);
+            border-left-color: var(--teal-color);
+        }
+
+        #sidebar ul li a i {
+            margin-right: 12px;
+            width: 20px;
+            text-align: center;
+        }
+
+        #content {
+            margin-left: 260px;
+            min-height: 100vh;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 290px;
+            width: 100%;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            background-color: #ffffff;
+        }
+
+        .evidence-btn {
+            background: #e0f2fe;
+            color: #0284c7;
+            border: 1px solid #bae6fd;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .evidence-btn:hover {
+            background: #0284c7;
+            color: #ffffff;
+        }
+
+        .table > :not(caption) > * > * {
+            padding: 0.85rem 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar navigation -->
+    <nav id="sidebar">
+        <div class="sidebar-header d-flex align-items-center">
+            <i class="fa-solid fa-hospital-user fa-2x me-2"></i>
+            <div>
+                <h5 class="m-0 fw-bold">MMU Portal</h5>
+                <small style="font-size: 0.75rem; opacity: 0.9;">Ministry Monitors Unit</small>
+            </div>
+        </div>
+        <ul class="list-unstyled mt-3">
+            <li><a href="index.html"><i class="fa-solid fa-chart-line"></i> Main Dashboard</a></li>
+            <li><a href="hf-open.html"><i class="fa-solid fa-door-open text-success"></i> 1. HF Open</a></li>
+            <li class="active"><a href="mo-wmo.html"><i class="fa-solid fa-user-doctor text-info"></i> 2. MO / WMO Attendance</a></li>
+            <li><a href="labor-room.html"><i class="fa-solid fa-baby text-warning"></i> 3. Labor Room</a></li>
+            <li><a href="medicine.html"><i class="fa-solid fa-pills text-danger"></i> 4. Medicine</a></li>
+            <li><a href="anc-pnc.html"><i class="fa-solid fa-person-breastfeeding text-primary"></i> 5. ANC/PNC</a></li>
+            <li><a href="family-plan.html"><i class="fa-solid fa-people-roof text-secondary"></i> 6. Family Plan</a></li>
+            
+            <li><a href="epi.html"><i class="fa-solid fa-syringe text-info"></i> 7. EPI / Immunization</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div id="content">
+        <header class="bg-white border-bottom p-3 px-4 d-flex justify-content-between align-items-center shadow-sm">
+            <div>
+                <h5 class="m-0 fw-bold text-dark">2. Medical Officer (MO / WMO) Attendance Status</h5>
+                <small class="text-muted">Region-wise presence tracking & biometric evidence</small>
+            </div>
+            <span class="badge bg-success px-3 py-2 rounded-pill"><i class="fa-solid fa-circle-dot me-1"></i> Live Roster Active</span>
+        </header>
+
+        <main class="p-4">
+
+            <!-- Summary KPI Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card p-3 border-start border-4 border-success">
+                        <span class="text-muted small fw-semibold">Total Doctors Present</span>
+                        <h3 class="fw-bold my-1 text-success">182 <small class="fs-6 text-muted">(84.6%)</small></h3>
+                        <small class="text-muted">Biometrically verified today</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-3 border-start border-4 border-danger">
+                        <span class="text-muted small fw-semibold">Total Doctors Not Present</span>
+                        <h3 class="fw-bold my-1 text-danger">33 <small class="fs-6 text-muted">(15.4%)</small></h3>
+                        <small class="text-muted">Absent or unauthorized leave</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-3 border-start border-4 border-primary">
+                        <span class="text-muted small fw-semibold">Total Sanctioned Posts</span>
+                        <h3 class="fw-bold my-1 text-primary">215</h3>
+                        <small class="text-muted">Across 5 administrative regions</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="row g-4 mb-4">
+                <!-- Region-wise Presence vs Absent Chart -->
+                <div class="col-lg-8">
+                    <div class="card p-3 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold m-0"><i class="fa-solid fa-map-location-dot me-2 text-primary"></i>Region-Wise Doctor Presence vs Not Present</h6>
+                            <span class="badge bg-light text-dark border">By Region</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chartRegionalPresence"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overall Attendance Trend -->
+                <div class="col-lg-4">
+                    <div class="card p-3 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold m-0"><i class="fa-solid fa-chart-pie me-2 text-info"></i>Overall Attendance Rate</h6>
+                            <span class="badge bg-light text-dark border">Today</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chartOverallPie"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Table -->
+            <div class="card p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold m-0"><i class="fa-solid fa-clipboard-user me-2 text-secondary"></i>Live Biometric Attendance Roster</h6>
+                    <button class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-download me-1"></i> Export Status</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Doctor Name</th>
+                                <th>Designation</th>
+                                <th>Region</th>
+                                <th>Assigned Facility</th>
+                                <th>Check-In Time</th>
+                                <th>Attendance Status</th>
+                                <th class="text-center">Evidence Document</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><i class="fa-solid fa-user-doctor me-2 text-secondary"></i>Dr. Fatima Noor</td>
+                                <td><span class="badge bg-secondary">WMO / MO</span></td>
+                                <td>North Region</td>
+                                <td>RHC North Cantonment</td>
+                                <td>07:58 AM</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i> Present</span></td>
+                                <td class="text-center">
+                                    <button class="evidence-btn" onclick="openEvidenceModal('Dr. Fatima Noor', '07:58 AM', 'RHC North Cantonment', 'Biometric Thumbprint + Geo-Tag Verified', 'Present')">
+                                        <i class="fa-solid fa-file-lines me-1"></i> View Evidence
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><i class="fa-solid fa-user-doctor me-2 text-secondary"></i>Dr. Usman Tariq</td>
+                                <td><span class="badge bg-secondary">MO</span></td>
+                                <td>South Region</td>
+                                <td>BHU Green Park</td>
+                                <td>08:12 AM</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i> Present</span></td>
+                                <td class="text-center">
+                                    <button class="evidence-btn" onclick="openEvidenceModal('Dr. Usman Tariq', '08:12 AM', 'BHU Green Park', 'Biometric Facial Recognition Verified', 'Present')">
+                                        <i class="fa-solid fa-file-lines me-1"></i> View Evidence
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><i class="fa-solid fa-user-doctor me-2 text-secondary"></i>Dr. Zainab Ahmed</td>
+                                <td><span class="badge bg-secondary">WMO / MO</span></td>
+                                <td>East Region</td>
+                                <td>BHU West End</td>
+                                <td>--:--</td>
+                                <td><span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="fa-solid fa-circle-xmark me-1"></i> Not Present</span></td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-light text-muted border-0" disabled>
+                                        <i class="fa-solid fa-file-circle-xmark text-danger me-1"></i> No Record
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><i class="fa-solid fa-user-doctor me-2 text-secondary"></i>Dr. Ahmed Bilal</td>
+                                <td><span class="badge bg-secondary">MO</span></td>
+                                <td>West Region</td>
+                                <td>RHC Central East</td>
+                                <td>08:05 AM</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i> Present</span></td>
+                                <td class="text-center">
+                                    <button class="evidence-btn" onclick="openEvidenceModal('Dr. Ahmed Bilal', '08:05 AM', 'RHC Central East', 'Biometric Thumbprint Verified', 'Present')">
+                                        <i class="fa-solid fa-file-lines me-1"></i> View Evidence
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Evidence Modal -->
+    <div class="modal fade" id="evidenceModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="modalDoctorName"><i class="fa-solid fa-file-invoice text-primary me-2"></i>Attendance Proof Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="card bg-light p-3 mb-3 border-0">
+                        <div class="row g-2">
+                            <div class="col-6"><small class="text-muted">Assigned Facility:</small> <br><strong id="modalFacility">-</strong></div>
+                            <div class="col-6"><small class="text-muted">Verified Check-In:</small> <br><strong id="modalTime">-</strong></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted mb-1"><small>Verification Method & Geo-Log</small></label>
+                        <div class="p-2 border rounded bg-white text-dark" id="modalRemarks">
+                            -
+                        </div>
+                    </div>
+                    <div class="border rounded p-3 text-center bg-white">
+                        <i class="fa-solid fa-file-shield fa-3x text-success mb-2"></i>
+                        <p class="m-0 text-muted" style="font-size: 0.85rem;">Cryptographically Signed & Biometrically Authenticated Attendance Audit Record</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS & Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // Region-wise Presence vs Not Present Stacked Bar Chart
+        new Chart(document.getElementById('chartRegionalPresence'), {
+            type: 'bar',
+            data: {
+                labels: ['North Region', 'South Region', 'East Region', 'West Region', 'Central Region'],
+                datasets: [
+                    {
+                        label: 'Present',
+                        data: [45, 38, 40, 28, 31],
+                        backgroundColor: '#10b981', // Green
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Not Present (Absent)',
+                        data: [5, 7, 8, 6, 7],
+                        backgroundColor: '#ef4444', // Red
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { display: false }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        grid: { color: '#f1f5f9' }
+                    }
+                }
+            }
+        });
+
+        // Overall Attendance Pie/Doughnut Chart
+        new Chart(document.getElementById('chartOverallPie'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Present', 'Not Present'],
+                datasets: [{
+                    data: [182, 33],
+                    backgroundColor: ['#10b981', '#ef4444'],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        // Function to populate and open Evidence Modal
+        function openEvidenceModal(doctor, time, facility, remarks, status) {
+            document.getElementById('modalDoctorName').innerHTML = `<i class="fa-solid fa-file-invoice text-primary me-2"></i>Evidence File - ${doctor}`;
+            document.getElementById('modalFacility').innerText = facility;
+            document.getElementById('modalTime').innerText = time;
+            document.getElementById('modalRemarks').innerText = remarks;
+
+            var modal = new bootstrap.Modal(document.getElementById('evidenceModal'));
+            modal.show();
+        }
+    </script>
+</body>
+</html>

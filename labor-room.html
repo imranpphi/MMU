@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMU - Labor Room Status</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; }
+        #sidebar { width: 250px; height: 100vh; position: fixed; background-color: #0f172a; color: #fff; z-index: 1000; }
+        #sidebar .sidebar-header { padding: 20px; background: #0284c7; font-weight: bold; }
+        #sidebar ul li a { padding: 12px 20px; display: flex; align-items: center; color: #cbd5e1; text-decoration: none; border-left: 4px solid transparent; }
+        #sidebar ul li.active a, #sidebar ul li a:hover { color: #fff; background: #1e293b; border-left-color: #0d9488; }
+        #sidebar ul li a i { margin-right: 12px; width: 20px; text-align: center; }
+        #content { margin-left: 250px; min-height: 100vh; }
+        .chart-container { position: relative; height: 320px; width: 100%; }
+        .reason-text { font-size: 0.825rem; color: #64748b; margin-top: 2px; }
+    </style>
+</head>
+<body>
+
+    <nav id="sidebar">
+        <div class="sidebar-header d-flex align-items-center">
+            <i class="fa-solid fa-hospital-user fa-2x me-2"></i>
+            <div>
+                <h5 class="m-0 fw-bold">MMU Portal</h5>
+                <small style="font-size: 0.75rem;">Ministry Monitors Unit</small>
+            </div>
+        </div>
+        <ul class="list-unstyled mt-2">
+            <li><a href="index.html"><i class="fa-solid fa-chart-line text-light"></i> Main Dashboard</a></li>
+            <li><a href="hf-open.html"><i class="fa-solid fa-door-open text-success"></i> 1. HF Open</a></li>
+            <li><a href="mo-wmo.html"><i class="fa-solid fa-user-doctor text-info"></i> 2. MO/WMO</a></li>
+            <li class="active"><a href="labor-room.html"><i class="fa-solid fa-baby text-warning"></i> 3. Labor Room</a></li>
+            <li><a href="medicine.html"><i class="fa-solid fa-pills text-danger"></i> 4. Medicine</a></li>
+            <li><a href="anc-pnc.html"><i class="fa-solid fa-person-breastfeeding text-primary"></i> 5. ANC/PNC</a></li>
+            <li><a href="family-plan.html"><i class="fa-solid fa-people-roof text-secondary"></i> 6. Family Plan</a></li>
+            
+            <li><a href="epi.html"><i class="fa-solid fa-syringe text-info"></i> 7. EPI / Immunization</a></li>
+        </ul>
+    </nav>
+
+    <div id="content">
+        <header class="bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
+            <h5 class="m-0 fw-bold">3. Labor Room Monitoring (Regional Analytics)</h5>
+            <span class="badge bg-warning text-dark">6 Regions Tracked</span>
+        </header>
+
+        <main class="p-4">
+            <!-- Parameter Summary Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card p-3 shadow-sm border-0 text-center border-start border-4 border-primary">
+                        <small class="text-muted fw-bold">1. INFRASTRUCTURE</small>
+                        <h3 class="fw-bold text-primary mt-2">91.5%</h3>
+                        <small class="text-muted">Avg across 6 Regions</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card p-3 shadow-sm border-0 text-center border-start border-4 border-info">
+                        <small class="text-muted fw-bold">2. ESSENTIAL EQUIPMENT</small>
+                        <h3 class="fw-bold text-info mt-2">88.2%</h3>
+                        <small class="text-muted">Avg across 6 Regions</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card p-3 shadow-sm border-0 text-center border-start border-4 border-danger">
+                        <small class="text-muted fw-bold">3. ESSENTIAL MEDICINES</small>
+                        <h3 class="fw-bold text-danger mt-2">79.0%</h3>
+                        <small class="text-muted">Avg across 6 Regions</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card p-3 shadow-sm border-0 text-center border-start border-4 border-success">
+                        <small class="text-muted fw-bold">4. BEmONC FUNCTIONALITY</small>
+                        <h3 class="fw-bold text-success mt-2">85.0%</h3>
+                        <small class="text-muted">Avg across 6 Regions</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Regional Charts Section -->
+            <div class="row g-3 mb-4">
+                <!-- Bar Chart: Regional Parameter Comparison -->
+                <div class="col-lg-8">
+                    <div class="card p-3 shadow-sm border-0 h-100">
+                        <h6 class="fw-bold mb-3">Region-Wise 4-Parameter Readiness Breakdown</h6>
+                        <div class="chart-container">
+                            <canvas id="regionBarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Doughnut Chart: Overall Status Share -->
+                <div class="col-lg-4">
+                    <div class="card p-3 shadow-sm border-0 h-100">
+                        <h6 class="fw-bold mb-3">6-Region Compliance Share</h6>
+                        <div class="chart-container">
+                            <canvas id="complianceDoughnutChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monitoring Table based on Parameters -->
+            <div class="card p-3 shadow-sm border-0">
+                <h6 class="fw-bold mb-3">Facility Status Assessment by Region</h6>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Region</th>
+                                <th>Health Facility</th>
+                                <th>1. Infrastructure</th>
+                                <th>Reason</th>
+                                <th>2. Equipment &amp; Tools</th>
+                                <th>Reason</th>
+                                <th>3. Essential Medicines</th>
+                                <th>Reason</th>
+                                <th>4. BEmONC Functionality</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge bg-secondary">Region 1</span></td>
+                                <td class="fw-semibold">MCH Center Zone 1</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-circle-check me-1"></i> Adequate</span></td>
+                                <td class="reason-text">24/7 Power, Clean Water &amp; Sanitation operational</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-circle-check me-1"></i> Fully Equipped</span></td>
+                                <td class="reason-text">All delivery sets &amp; suction apparatus available</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-circle-check me-1"></i> Stocked</span></td>
+                                <td class="reason-text">Oxytocin, MgSO4 &amp; IV fluids fully stocked</td>
+                                <td><span class="badge bg-success"><i class="fa-solid fa-shield-halved me-1"></i> Functional</span></td>
+                                <td class="reason-text">All 7 signal functions performed routinely</td>
+                                <td><span class="badge bg-success">Compliant</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-secondary">Region 2</span></td>
+                                <td class="fw-semibold">RHC Satellite Hub</td>
+                                <td><span class="badge bg-warning-subtle text-warning border border-warning text-dark"><i class="fa-solid fa-triangle-exclamation me-1"></i> Minor Issues</span></td>
+                                <td class="reason-text">Generator backup battery requiring maintenance</td>
+                                <td><span class="badge bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-circle-xmark me-1"></i> Missing Kits</span></td>
+                                <td class="reason-text">Neonatal resuscitation bag &amp; mask kit missing</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-circle-check me-1"></i> Stocked</span></td>
+                                <td class="reason-text">Medicines in adequate supply (>30 days stock)</td>
+                                <td><span class="badge bg-warning text-dark"><i class="fa-solid fa-triangle-exclamation me-1"></i> Partial</span></td>
+                                <td class="reason-text">Assisted vaginal delivery signal function limited</td>
+                                <td><span class="badge bg-warning text-dark">Action Needed</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-secondary">Region 3</span></td>
+                                <td class="fw-semibold">BHU North Division</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-circle-check me-1"></i> Adequate</span></td>
+                                <td class="reason-text">Building &amp; washroom infrastructure fully intact</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-circle-check me-1"></i> Fully Equipped</span></td>
+                                <td class="reason-text">Autoclave &amp; examination lights fully functional</td>
+                                <td><span class="badge bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-circle-xmark me-1"></i> Stockout</span></td>
+                                <td class="reason-text">Injectable Oxytocin out of stock for >48 hours</td>
+                                <td><span class="badge bg-danger"><i class="fa-solid fa-circle-xmark me-1"></i> Non-Functional</span></td>
+                                <td class="reason-text">PPH management signal function compromised</td>
+                                <td><span class="badge bg-danger">Critical</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-secondary">Region 4</span></td>
+                                <td class="fw-semibold">District Hospital Unit</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-circle-check me-1"></i> Adequate</span></td>
+                                <td class="reason-text">Solar backup &amp; running water continuously available</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-circle-check me-1"></i> Fully Equipped</span></td>
+                                <td class="reason-text">Complete OB/GYN sets &amp; warmers verified</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-circle-check me-1"></i> Stocked</span></td>
+                                <td class="reason-text">All essential life-saving uterotonics available</td>
+                                <td><span class="badge bg-success"><i class="fa-solid fa-shield-halved me-1"></i> Functional</span></td>
+                                <td class="reason-text">24/7 skilled birth attendants on active shift</td>
+                                <td><span class="badge bg-success">Compliant</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-secondary">Region 5</span></td>
+                                <td class="fw-semibold">MCH South Clinic</td>
+                                <td><span class="badge bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-circle-xmark me-1"></i> No Backup Power</span></td>
+                                <td class="reason-text">Frequent grid outages without functional generator</td>
+                                <td><span class="badge bg-warning-subtle text-warning border border-warning text-dark"><i class="fa-solid fa-triangle-exclamation me-1"></i> Partial Tools</span></td>
+                                <td class="reason-text">Oxygen cylinder pressure gauge malfunctioning</td>
+                                <td><span class="badge bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-circle-xmark me-1"></i> Stockout</span></td>
+                                <td class="reason-text">Magnesium Sulfate &amp; Antihypertensives out of stock</td>
+                                <td><span class="badge bg-danger"><i class="fa-solid fa-circle-xmark me-1"></i> Non-Functional</span></td>
+                                <td class="reason-text">Inability to manage pre-eclampsia / eclampsia</td>
+                                <td><span class="badge bg-danger">Critical</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-secondary">Region 6</span></td>
+                                <td class="fw-semibold">RHC Central Center</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-circle-check me-1"></i> Adequate</span></td>
+                                <td class="reason-text">Labor room privacy curtains &amp; lighting in good order</td>
+                                <td><span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-circle-check me-1"></i> Fully Equipped</span></td>
+                                <td class="reason-text">Vacuum extractor &amp; baby weighing scales present</td>
+                                <td><span class="badge bg-warning-subtle text-warning border border-warning text-dark"><i class="fa-solid fa-triangle-exclamation me-1"></i> Low Stock</span></td>
+                                <td class="reason-text">Ampicillin &amp; IV Antibiotics below minimum reorder level</td>
+                                <td><span class="badge bg-success"><i class="fa-solid fa-shield-halved me-1"></i> Functional</span></td>
+                                <td class="reason-text">Neonatal resuscitation &amp; delivery operational</td>
+                                <td><span class="badge bg-success">Compliant</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Chart Scripts -->
+    <script>
+        const regions = ['Region 1', 'Region 2', 'Region 3', 'Region 4', 'Region 5', 'Region 6'];
+
+        // Bar Chart initialization
+        const barCtx = document.getElementById('regionBarChart').getContext('2d');
+        new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: regions,
+                datasets: [
+                    {
+                        label: '1. Infrastructure (%)',
+                        data: [95, 80, 90, 98, 70, 92],
+                        backgroundColor: '#0284c7'
+                    },
+                    {
+                        label: '2. Equipment (%)',
+                        data: [90, 72, 88, 96, 65, 85],
+                        backgroundColor: '#06b6d4'
+                    },
+                    {
+                        label: '3. Medicines (%)',
+                        data: [88, 85, 45, 92, 50, 78],
+                        backgroundColor: '#ef4444'
+                    },
+                    {
+                        label: '4. BEmONC Functionality (%)',
+                        data: [92, 75, 40, 95, 48, 88],
+                        backgroundColor: '#10b981'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { callback: value => value + '%' }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        // Doughnut Chart initialization
+        const doughnutCtx = document.getElementById('complianceDoughnutChart').getContext('2d');
+        new Chart(doughnutCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Fully Compliant', 'Action Needed', 'Critical'],
+                datasets: [{
+                    data: [3, 1, 2], // Count out of 6 regions
+                    backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
