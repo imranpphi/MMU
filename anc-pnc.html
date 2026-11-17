@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ANC / PNC Services Knock-Out & Compliance Analytics Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #0f172a; }
+    .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .sticky-col-1 { position: sticky; left: 0; z-index: 10; }
+    .sticky-col-2 { position: sticky; left: 88px; z-index: 10; }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+    .animate-modal { animation: fadeIn 0.16s ease-out forwards; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Header -->
+  <header class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-800 text-white shadow-lg sticky top-0 z-30 border-b border-slate-800">
+    <div class="max-w-[1680px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-rose-700 flex items-center justify-center font-extrabold text-base shadow-md shadow-rose-950/50 tracking-tighter">
+          ANC
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight">ANC / PNC Knock-Out & Compliance Analytics Dashboard</h1>
+            <span class="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              Full Dataset • 49 Facilities
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">Provincial Maternal Health Assessment • 6 Regions • Staff Availability & 8 ANC/PNC Diagnostic Parameters</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <button onclick="resetFilters()" class="hidden sm:inline-flex px-3 py-1.5 text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg transition">
+          Reset Filters
+        </button>
+        <button onclick="exportComplianceCSV()" class="px-3.5 py-2 text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white rounded-lg shadow-sm transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Export Updated CSV
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-[1680px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- Executive KPI Strip -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Facilities</span>
+          <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">49</span>
+        </div>
+        <div class="mt-3">
+          <div id="kpi-total-facilities" class="text-2xl font-extrabold text-slate-900">49</div>
+          <p id="kpi-facility-split" class="text-xs text-slate-500 mt-0.5">35 (6/6) • 14 (24/7)</p>
+          <p id="kpi-transition-split" class="text-[11px] font-semibold text-indigo-600 mt-1">14 Newly Taken (1) • 35 Existing (-)</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Open Knock-Outs (✖)</span>
+          <span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-600 font-bold text-[11px]">Unresolved</span>
+        </div>
+        <div class="mt-3">
+          <div id="kpi-open-knockouts" class="text-2xl font-extrabold text-rose-600">65</div>
+          <p id="kpi-affected-facilities" class="text-xs text-slate-500 mt-0.5">across 0 facilities</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Contested Items</span>
+          <span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 font-bold text-[11px]">In Compliance</span>
+        </div>
+        <div class="mt-3">
+          <div id="kpi-contested-count" class="text-2xl font-extrabold text-amber-600">0</div>
+          <p id="kpi-verified-count" class="text-xs text-slate-500 mt-0.5">0 verified • 0 pending review</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">ANC/PNC Compliance</span>
+          <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[11px]">Live Rate</span>
+        </div>
+        <div class="mt-3">
+          <div id="kpi-compliance-rate" class="text-2xl font-extrabold text-emerald-600">0%</div>
+          <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
+            <div id="kpi-compliance-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Highest Knock-Out Item</span>
+          <span class="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-bold text-[11px]">Top Deficit</span>
+        </div>
+        <div class="mt-3">
+          <div id="kpi-top-param" class="text-sm font-bold text-slate-900 line-clamp-1">Staff Availability</div>
+          <p id="kpi-top-param-count" class="text-xs text-rose-600 font-semibold mt-1">25 facilities knocked out</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Visual Analytics Charts Section -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <!-- Chart 1: Regional Compliance & Knock-Out Stacked Bar -->
+      <div class="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-800">Regional Knock-Out & Contestation Status</h2>
+            <p class="text-xs text-slate-500">Open Knock-Outs vs. Contested items across all 6 regions</p>
+          </div>
+        </div>
+        <div class="relative flex-1 min-h-[240px]">
+          <canvas id="chart-regions"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 2: All 9 ANC/PNC Parameters Knock-Out Ranking -->
+      <div class="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-800">ANC/PNC Parameter Knock-Outs</h2>
+            <p class="text-xs text-slate-500">Open deficits (✖, No strips, Not functional) across 9 parameters</p>
+          </div>
+        </div>
+        <div class="relative flex-1 min-h-[240px]">
+          <canvas id="chart-params"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 3: Overall Parameter Status Doughnut -->
+      <div class="lg:col-span-3 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col">
+        <div class="mb-3">
+          <h2 class="text-sm font-bold text-slate-800">Parameter Breakdown</h2>
+          <p class="text-xs text-slate-500">All 441 ANC/PNC checks (49 × 9)</p>
+        </div>
+        <div class="relative flex-1 min-h-[240px] flex items-center justify-center">
+          <canvas id="chart-breakdown"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Regional Quick-Filter Cards -->
+    <section class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Regional Quick Filter (Click to isolate region)</h2>
+        <span id="active-filter-label" class="text-xs font-medium text-slate-400">Showing all 49 records</span>
+      </div>
+      <div id="region-cards" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"></div>
+    </section>
+
+    <!-- Main Data & Compliance Tabs Container -->
+    <section class="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+      <div class="border-b border-slate-200 px-4 sm:px-6 pt-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 bg-slate-50/40">
+        <!-- Navigation Tabs -->
+        <div class="flex gap-6">
+          <button id="tab-btn-assessment" onclick="switchTab('assessment')" class="pb-3.5 text-sm font-bold border-b-2 border-rose-600 text-rose-600 transition flex items-center gap-2">
+            <span>ANC/PNC Assessment Matrix</span>
+            <span id="badge-filtered-count" class="px-2 py-0.5 text-xs rounded-full bg-slate-200/80 text-slate-800">49</span>
+          </button>
+          <button id="tab-btn-compliance" onclick="switchTab('compliance')" class="pb-3.5 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-2">
+            <span>Compliance Provided & Contestations</span>
+            <span id="badge-compliance-count" class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800 font-extrabold">0</span>
+          </button>
+        </div>
+
+        <!-- Filters Toolbar -->
+        <div id="assessment-filters" class="pb-3.5 flex flex-wrap items-center gap-2">
+          <div class="relative">
+            <input type="text" id="search-input" oninput="handleFilterChange()" placeholder="Search facility, code, district..." class="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 w-52" />
+            <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+
+          <select id="region-filter" onchange="handleRegionDropdownChange()" class="px-2.5 py-1.5 text-xs font-medium border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-rose-500">
+            <option value="ALL">All Regions (49)</option>
+          </select>
+
+          <select id="district-filter" onchange="handleFilterChange()" class="px-2.5 py-1.5 text-xs font-medium border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-rose-500">
+            <option value="ALL">All Districts</option>
+          </select>
+
+          <select id="transition-filter" onchange="handleFilterChange()" class="px-2.5 py-1.5 text-xs font-medium border border-indigo-200 rounded-lg bg-indigo-50/40 text-slate-800 focus:outline-none focus:border-indigo-500">
+            <option value="ALL">All Facility Types (49)</option>
+            <option value="1">Newly Taken HF (1)</option>
+            <option value="-">Existing HF (-)</option>
+          </select>
+
+          <select id="wstatus-filter" onchange="handleFilterChange()" class="px-2.5 py-1.5 text-xs font-medium border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-rose-500">
+            <option value="ALL">All W.Status</option>
+            <option value="(6/6)">(6/6)</option>
+            <option value="(24/7)">(24/7)</option>
+          </select>
+
+          <select id="status-filter" onchange="handleFilterChange()" class="px-2.5 py-1.5 text-xs font-medium border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-rose-500">
+            <option value="ALL">All Compliance States</option>
+            <option value="KNOCKOUT">Has Open Knock-Outs (✖)</option>
+            <option value="STAFF_KO">Staff Unavailable (✖)</option>
+            <option value="ITEM_KO">Equipment/Strips Knock-Out (✖)</option>
+            <option value="CONTESTED">Has Contested Items</option>
+            <option value="COMPLIANT">100% Compliant (No ✖)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- TAB 1: Assessment Table + Pagination -->
+      <div id="view-assessment">
+        <div class="overflow-x-auto custom-scrollbar max-h-[620px]">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="sticky top-0 z-20 shadow-xs">
+              <tr id="table-header-row" class="bg-slate-100 text-slate-700 border-b border-slate-200 font-semibold">
+                <!-- Populated dynamically -->
+              </tr>
+            </thead>
+            <tbody id="table-body" class="divide-y divide-slate-200">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Footer -->
+        <div class="px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+          <div id="pagination-info">Showing 1 to 25 of 49 facilities</div>
+          <div class="flex items-center gap-2">
+            <label class="text-slate-500">Rows:</label>
+            <select id="page-size" onchange="changePageSize()" class="px-2 py-1 border border-slate-300 rounded bg-white text-xs">
+              <option value="25" selected>25</option>
+              <option value="49">All (49)</option>
+            </select>
+            <div class="flex items-center gap-1 ml-2">
+              <button id="btn-prev-page" onclick="prevPage()" class="px-2.5 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 font-medium">Prev</button>
+              <span id="page-indicator" class="px-2 font-semibold text-slate-800">Page 1 of 2</span>
+              <button id="btn-next-page" onclick="nextPage()" class="px-2.5 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 font-medium">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: Compliance Provided / Contestation Register -->
+      <div id="view-compliance" class="hidden p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Compliance Provided & Parameter Contestation Register</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Every knocked-out ANC/PNC parameter contested from the Assessment Matrix is logged here with officer details, evidence references, and compliance verification status.</p>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Compliance Provided (Pending)
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Compliance Verified
+            </span>
+          </div>
+        </div>
+
+        <div id="compliance-empty-state" class="text-center py-16 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/40">
+          <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3 text-xl font-extrabold">!</div>
+          <h4 class="text-sm font-bold text-slate-800">No Contestations Submitted Yet</h4>
+          <p class="text-xs text-slate-500 max-w-md mx-auto mt-1.5 leading-relaxed">
+            Click any red <span class="inline-block px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-bold">✖</span> cell (including <span class="font-semibold text-rose-700">✖ (No strips)</span> or <span class="font-semibold text-rose-700">✖ (Not functional)</span>) or the <span class="font-semibold text-slate-700">Contest</span> button in the ANC/PNC Assessment Matrix to file a Parameter Knock-Out Contestation.
+          </p>
+        </div>
+
+        <div id="compliance-table-wrapper" class="hidden overflow-x-auto border border-slate-200 rounded-xl shadow-2xs">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-100 text-slate-700 border-b border-slate-200 font-semibold">
+              <tr>
+                <th class="py-3 px-4">ID</th>
+                <th class="py-3 px-4">Health Facility & Region</th>
+                <th class="py-3 px-4">Knocked-Out Parameter</th>
+                <th class="py-3 px-4">Primary Contestation Reason</th>
+                <th class="py-3 px-4">Contesting Officer</th>
+                <th class="py-3 px-4">Evidence & Justification</th>
+                <th class="py-3 px-4">Compliance Status</th>
+                <th class="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="compliance-tbody" class="divide-y divide-slate-200 bg-white"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- PARAMETER KNOCK-OUT CONTESTATION MODAL (Exact Template Design) -->
+  <div id="contestation-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/65 backdrop-blur-xs p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden my-auto animate-modal">
+      
+      <!-- Crimson Header -->
+      <div class="bg-[#be123c] px-6 py-4 flex items-start justify-between text-white">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center font-bold text-lg shrink-0">
+            !
+          </div>
+          <div>
+            <h2 class="text-base sm:text-lg font-bold leading-snug">Parameter Knock-Out Contestation</h2>
+            <p class="text-xs text-rose-100">Select a knocked-out ANC/PNC item, give the reason & attach evidence</p>
+          </div>
+        </div>
+        <button onclick="closeModal()" class="text-white/80 hover:text-white p-1 rounded-lg transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <form id="contestation-form" onsubmit="submitContestation(event)" class="p-6 space-y-4 max-h-[82vh] overflow-y-auto custom-scrollbar">
+        
+        <!-- Facility & Parameter Info Card -->
+        <div class="bg-slate-50 border border-slate-200/90 rounded-xl p-4 space-y-2.5 text-xs">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-slate-500">Health Facility:</span>
+            <span id="modal-facility-name" class="font-bold text-slate-900 text-sm text-right">BHU Tahir Hingoro (218043)</span>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-slate-500">Region / District:</span>
+            <span id="modal-region-district" class="font-semibold text-slate-800">Hyderabad • Matiari</span>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-slate-500">Facility Type (Transition):</span>
+            <span id="modal-transition-badge" class="font-semibold text-slate-800">Existing HF (-)</span>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-slate-500">Assessment Visit:</span>
+            <span id="modal-visit-date" class="font-medium text-slate-700">2026-10-03 13:30</span>
+          </div>
+          <div class="flex items-center justify-between gap-2 pt-1">
+            <span class="text-slate-500">Knocked-Out Parameter:</span>
+            <span id="modal-domain-badge" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-rose-50 border border-rose-200 text-rose-700 font-semibold">
+              <span>✕</span> ANC / PNC Service Readiness
+            </span>
+          </div>
+
+          <div class="pt-2">
+            <label class="block font-semibold text-slate-700 mb-1.5">Knocked-Out Sub-Parameter(s) (Select items to contest):</label>
+            <select id="modal-subparam-select" required onchange="handleSubParamChange()" class="w-full px-3 py-2.5 text-xs font-medium rounded-lg border-2 border-rose-300 bg-white text-slate-800 focus:outline-none focus:border-rose-500">
+              <option value="">-- Select knocked-out sub-parameter --</option>
+            </select>
+            <p id="modal-remaining-count" class="text-[11px] text-slate-500 mt-1.5">0 of 0 knocked-out items left to contest</p>
+          </div>
+        </div>
+
+        <!-- Primary Reason (Dynamically populated for Staff vs Equipment/Strips) -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-semibold text-slate-700">Primary Reason for Contestation <span class="text-rose-600">*</span></label>
+            <span id="modal-reason-category-tag" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600">Select Sub-Parameter</span>
+          </div>
+          <select id="modal-reason-select" required class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600">
+            <option value="">-- Select a sub-parameter first --</option>
+          </select>
+        </div>
+
+        <!-- Contesting Officer & Role -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Contesting Officer Name <span class="text-rose-600">*</span></label>
+            <input type="text" id="modal-officer-name" required placeholder="e.g. Dr. Uzma Shaikh / LHV" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Designation / Role <span class="text-rose-600">*</span></label>
+            <input type="text" id="modal-officer-role" required placeholder="e.g. WMO / LHV / Facility In-charge" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600" />
+          </div>
+        </div>
+
+        <!-- Evidence Reference -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Evidence / Attendance / Stock Register Reference</label>
+          <input type="text" id="modal-evidence-ref" placeholder="e.g. Posting Order #112, ANC Register Pg#18, Functional Device Photo" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600" />
+        </div>
+
+        <!-- File Upload Box -->
+        <div>
+          <label for="modal-file-input" class="flex items-center gap-3 p-3.5 border-2 border-dashed border-slate-300 hover:border-teal-500 rounded-xl cursor-pointer transition bg-slate-50/50">
+            <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+            <div class="text-xs">
+              <span class="font-semibold text-slate-700">Attach evidence file(s)</span>
+              <span class="text-slate-500"> — photo, PDF or document • max 5 files, 8 MB each</span>
+              <div id="modal-file-list" class="text-teal-700 font-semibold mt-0.5"></div>
+            </div>
+          </label>
+          <input type="file" id="modal-file-input" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" onchange="handleFileSelect(event)" class="hidden" />
+        </div>
+
+        <!-- Detailed Justification -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Detailed Justification & Remarks <span class="text-rose-600">*</span></label>
+          <textarea id="modal-remarks" rows="3" required placeholder="Provide factual details supporting why this ANC/PNC parameter should be reconsidered..." class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600"></textarea>
+        </div>
+
+        <!-- Footer Buttons -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-[#0f766e] hover:bg-[#115e59] rounded-lg shadow-sm transition">
+            Save Contestation
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden items-center gap-2.5 bg-slate-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-xl border border-slate-700">
+    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+    <span id="toast-msg">Contestation saved and routed to Compliance!</span>
+  </div>
+
+  <script>
+    // 9 ANC/PNC Parameters from Justification Sheet - Copy.xlsx
+    const ANC_PARAMS = [{"short": "Staff Availability", "full": "Staff Availability (ANC/PNC)", "category": "Staff"}, {"short": "Pregnancy Strips", "full": "Pregnancy strips", "category": "Equipment / Item"}, {"short": "Urine Albumin Strips", "full": "Urine albumin strips", "category": "Equipment / Item"}, {"short": "Fetoscope", "full": "Fetoscope", "category": "Equipment / Item"}, {"short": "Adult Weight Machine", "full": "Adult Weight machine", "category": "Equipment / Item"}, {"short": "Baby Weight Machine", "full": "Baby Weight machine", "category": "Equipment / Item"}, {"short": "Glucometer", "full": "Glucometer", "category": "Equipment / Item"}, {"short": "HB Meter", "full": "HB meter", "category": "Equipment / Item"}, {"short": "BP Apparatus", "full": "BP apparatus", "category": "Equipment / Item"}];
+
+    // Dual Contestation Reason Lists from Sheet5
+    const STAFF_REASONS = ["Not Posted", "Not joining due to hard to reach area", "Offer latter issued", "Posted now", "Posted but on Cluster", "Leave", "Present During Monitor visit", "Late arrival", "Absent", "Training", "DO/MRM", "Miss Reporting by MMU Monitor", "HF under On going R&R in internal PPHI scheme", "HF under On going R&R  in 1000 days  scheme", "HF under On going R&R in NHSP scheme", "HF Running in alternate Site", "Dilapated Condition"];
+    const ITEM_REASONS = ["Available /Functional now", "Not Available/Non functional", "Miss Reporting by MMU Monitor", "HF under On going R&R in internal PPHI scheme", "HF under On going R&R  in 1000 days  scheme", "HF under On going R&R in NHSP scheme", "HF Running in alternate Site", "Dilapated Condition"];
+
+    // Complete 49 Facility Records from Justification Sheet - Copy.xlsx (ANC-PNC)
+    const RAW_FACILITIES = [{"c": "213018", "r": "Hyderabad", "d": "Hyderabad", "w": "(24/7)", "n": "BHU Sehrish Nagar", "t": "-", "v": "2026-10-05 12:24", "s": ["✔", "✔", "✖", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "218043", "r": "Hyderabad", "d": "Matiari", "w": "(6/6)", "n": "BHU Tahir Hingoro", "t": "-", "v": "2026-10-03 13:30", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "218023", "r": "Hyderabad", "d": "Matiari", "w": "(6/6)", "n": "RHC Oderolal Station", "t": "1", "v": "2026-10-03 11:48", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "223127", "r": "Karachi", "d": "Karachi 2 B", "w": "(6/6)", "n": "BHU 50-A", "t": "1", "v": "2026-10-19 12:30", "s": ["✔", "✔", "✔", "✔", "✔", "✔", "✔", "✖ (No strips)", "✔"]}, {"c": "226042", "r": "Karachi", "d": "Malir", "w": "(6/6)", "n": "Bakhsha Village", "t": "-", "v": "2026-10-13 12:24", "s": ["✔", "✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "214041", "r": "Karachi", "d": "Sujawal", "w": "(6/6)", "n": "BHU Khair Bux Laghari", "t": "-", "v": "2026-10-19 12:35", "s": ["✔", "✔", "✖", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "214018", "r": "Karachi", "d": "Sujawal", "w": "(24/7)", "n": "BHU Plus Bannu", "t": "-", "v": "2026-10-05 12:53", "s": ["✔", "✔", "✖", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "214023", "r": "Karachi", "d": "Sujawal", "w": "(6/6)", "n": "BHU Rahooth", "t": "-", "v": "2026-10-05 13:41", "s": ["✔", "✔", "✖", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "217063", "r": "Karachi", "d": "Thatta", "w": "(6/6)", "n": "BHU Mathino Khan Rind", "t": "-", "v": "2026-10-13 12:00", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "212166", "r": "Larkana", "d": "Dadu", "w": "(6/6)", "n": "BHU Beledai", "t": "1", "v": "2026-10-20 13:16", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✖", "✔", "✔"]}, {"c": "212028", "r": "Larkana", "d": "Dadu", "w": "(6/6)", "n": "BHU Essa Khan Thebo", "t": "-", "v": "2026-10-12 13:24", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "212045", "r": "Larkana", "d": "Dadu", "w": "(6/6)", "n": "BHU Faridabad", "t": "-", "v": "2026-10-07 10:16", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "212051", "r": "Larkana", "d": "Dadu", "w": "(6/6)", "n": "BHU Saeedpur", "t": "-", "v": "2026-10-07 08:16", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "212049", "r": "Larkana", "d": "Dadu", "w": "(6/6)", "n": "Neu Goth", "t": "1", "v": "2026-10-12 14:23", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "231031", "r": "Larkana", "d": "Jacobabad", "w": "(6/6)", "n": "BHU Azizabad", "t": "-", "v": "2026-10-17 10:29", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "234049", "r": "Larkana", "d": "Kamber", "w": "(24/7)", "n": "BHU Gaji Khuhawar", "t": "-", "v": "2026-10-19 12:42", "s": ["✔", "✔", "✔", "✔", "✔", "✔", "✖", "✔", "✔"]}, {"c": "234045", "r": "Larkana", "d": "Kamber", "w": "(6/6)", "n": "BHU Mir Pur Buriro", "t": "-", "v": "2026-10-10 13:53", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "234128", "r": "Larkana", "d": "Kamber", "w": "(24/7)", "n": "GD Sijawal", "t": "-", "v": "2026-10-17 08:16", "s": ["✔", "✔", "✔", "✔", "✔", "✔", "✔", "✖ (Not functional)", "✔"]}, {"c": "232068", "r": "Larkana", "d": "Larkana - A", "w": "(24/7)", "n": "RHC Ghari Khuda Bux Bhutto", "t": "-", "v": "2026-10-15 10:28", "s": ["✔", "✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "211073", "r": "Mirpurkhas", "d": "Badin - B", "w": "(6/6)", "n": "BHU Gharo", "t": "-", "v": "2026-10-06 09:57", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "211046", "r": "Mirpurkhas", "d": "Badin - B", "w": "(24/7)", "n": "RHC Tando Ghulam Ali", "t": "1", "v": "2026-10-08 10:09", "s": ["✔", "✔", "✔", "✔", "✔", "✔", "✔", "✖ (No strips)", "✔"]}, {"c": "253039", "r": "Mirpurkhas", "d": "Tharparkar - A", "w": "(6/6)", "n": "BHU Bughar", "t": "1", "v": "2026-10-10 10:16", "s": ["✔", "✔", "✔", "✔", "✔", "✔", "✔", "✖ (No strips)", "✔"]}, {"c": "253055", "r": "Mirpurkhas", "d": "Tharparkar - A", "w": "(6/6)", "n": "BHU Tobhario Juneja", "t": "1", "v": "2026-10-14 12:45", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "254036", "r": "Mirpurkhas", "d": "Umar Kot", "w": "(6/6)", "n": "BHU Mohammad Hassan Gujrati", "t": "-", "v": "2026-10-06 09:46", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "254038", "r": "Mirpurkhas", "d": "Umar Kot", "w": "(6/6)", "n": "BHU Pir Sarhandhi", "t": "-", "v": "2026-10-14 09:26", "s": ["✖", "✖", "✖", "✖", "✔", "✔", "✔", "✔", "✔"]}, {"c": "254077", "r": "Mirpurkhas", "d": "Umar Kot", "w": "(24/7)", "n": "RHC Chhore", "t": "1", "v": "2026-10-13 09:23", "s": ["✔", "✔", "✔", "✔", "✔", "✔", "✔", "✖ (Not functional)", "✔"]}, {"c": "242023", "r": "SBA", "d": "Naushero Feroze - B", "w": "(6/6)", "n": "BHU Bazid Pur", "t": "-", "v": "2026-10-17 12:36", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "242004", "r": "SBA", "d": "Naushero Feroze - B", "w": "(24/7)", "n": "RHC Bhiria City", "t": "1", "v": "2026-10-01 10:08", "s": ["✔", "✔", "✔", "✔", "✔", "✔", "✔", "✖ (Not functional)", "✔"]}, {"c": "242031", "r": "SBA", "d": "Naushero Feroze -A", "w": "(6/6)", "n": "BHU Dageja", "t": "-", "v": "2026-10-16 10:58", "s": ["✔", "✔", "✔", "✔", "✔", "✖", "✔", "✔", "✔"]}, {"c": "242034", "r": "SBA", "d": "Naushero Feroze -A", "w": "(6/6)", "n": "BHU Gul Mohammad Jatoi", "t": "-", "v": "2026-10-15 12:29", "s": ["✖", "✖", "✖", "✖", "✖", "✖", "✖", "✖", "✖"]}, {"c": "252037", "r": "SBA", "d": "Sanghar - A", "w": "(6/6)", "n": "BHU 22 Jamraoo", "t": "-", "v": "2026-10-05 10:04", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "252084", "r": "SBA", "d": "Sanghar - A", "w": "(24/7)", "n": "BHU Hathungo", "t": "-", "v": "2026-10-14 10:43", "s": ["✔", "✔", "✔", "✔", "✔", "✔", "✔", "✖ (No strips)", "✔"]}, {"c": "252077", "r": "SBA", "d": "Sanghar - A", "w": "(6/6)", "n": "BHU Kalu Rajar", "t": "-", "v": "2026-10-19 10:21", "s": ["✔", "✔", "✖", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "252007", "r": "SBA", "d": "Sanghar - A", "w": "(24/7)", "n": "RHC Kandiari", "t": "1", "v": "2026-10-09 10:21", "s": ["✔", "✔", "✔", "✔", "✔", "✖ (Not functional)", "✔", "✔", "✔"]}, {"c": "252063", "r": "SBA", "d": "Sanghar - B", "w": "(24/7)", "n": "BHU Malook Junejo", "t": "-", "v": "2026-10-08 10:58", "s": ["✔", "✔", "✔", "✔", "✔", "✔", "✔", "✖ (No strips)", "✔"]}, {"c": "243015", "r": "SBA", "d": "Shaheed Benazirabad - B", "w": "(6/6)", "n": "BHU Hamal Fakir", "t": "-", "v": "2026-10-10 12:31", "s": ["✔", "✔", "✖", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "243049", "r": "SBA", "d": "Shaheed Benazirabad - B", "w": "(6/6)", "n": "BHU Kot Maqbool Shah", "t": "-", "v": "2026-10-02 10:27", "s": ["✖", "✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "243004", "r": "SBA", "d": "Shaheed Benazirabad - B", "w": "(6/6)", "n": "BHU Mitha Khan Jokhio", "t": "-", "v": "2026-10-10 12:08", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "243044", "r": "SBA", "d": "Shaheed Benazirabad - B", "w": "(24/7)", "n": "BHU Nawab Wali Mohd", "t": "-", "v": "2026-10-15 12:35", "s": ["✔", "✔", "✔", "✔", "✔", "✔", "✔", "✖ (No strips)", "✔"]}, {"c": "243083", "r": "SBA", "d": "Shaheed Benazirabad - B", "w": "(6/6)", "n": "BHU Qutbi", "t": "-", "v": "2026-10-10 12:53", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "243133", "r": "SBA", "d": "Shaheed Benazirabad - B", "w": "(6/6)", "n": "MCH Masood Khan Bughio", "t": "-", "v": "2026-10-16 11:30", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "241042", "r": "Sukkur", "d": "Khairpur - A", "w": "(6/6)", "n": "BHU Kabir Khan Siyal", "t": "-", "v": "2026-10-01 11:54", "s": ["✔", "✔", "✔", "✔", "✖ (Not functional)", "✖ (Not functional)", "✔", "✔", "✔"]}, {"c": "233011", "r": "Sukkur", "d": "Shikarpur", "w": "(6/6)", "n": "B.H.U Kabalo", "t": "1", "v": "2026-10-02 11:05", "s": ["✔", "✔", "✔", "✔", "✔", "✔", "✔", "✖ (No strips)", "✔"]}, {"c": "233032", "r": "Sukkur", "d": "Shikarpur", "w": "(6/6)", "n": "B.H.U Taib Goth", "t": "1", "v": "2026-10-10 08:53", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✖ (No strips)", "✔"]}, {"c": "244130", "r": "Sukkur", "d": "Sukkur", "w": "(6/6)", "n": "BHU Aliwahan at Village Hakra", "t": "1", "v": "2026-10-10 11:39", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "244029", "r": "Sukkur", "d": "Sukkur", "w": "(6/6)", "n": "BHU Dubar", "t": "-", "v": "2026-10-16 11:27", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "244025", "r": "Sukkur", "d": "Sukkur", "w": "(24/7)", "n": "BHU Sultanpur", "t": "-", "v": "2026-10-06 12:25", "s": ["✔", "✔", "✖", "✔", "✔", "✔", "✖ (No strips)", "✔", "✔"]}, {"c": "244036", "r": "Sukkur", "d": "Sukkur", "w": "(6/6)", "n": "BHU Thariri", "t": "-", "v": "2026-10-05 13:46", "s": ["✖", "✔", "✔", "✔", "✔", "✔", "✔", "✔", "✔"]}, {"c": "244108", "r": "Sukkur", "d": "Sukkur", "w": "(24/7)", "n": "UHU Azizabad", "t": "1", "v": "2026-10-06 11:51", "s": ["✔", "✔", "✔", "✔", "✖ (Not functional)", "✔", "✔", "✔", "✔"]}];
+
+    // Helper: Any status starting with "✖" is a knock-out (e.g., "✖", "✖ (No strips)", "✖ (Not functional)")
+    function isKnockOutStatus(st) {
+      return typeof st === "string" && st.trim().startsWith("✖");
+    }
+
+    // Application State
+    let contestations = [];
+    let activeFacilityCode = null;
+    let selectedFiles = [];
+    let currentPage = 1;
+    let pageSize = 25;
+
+    // Chart.js Instances
+    let regionChart = null;
+    let paramChart = null;
+    let breakdownChart = null;
+
+    function init() {
+      populateFilters();
+      renderHeader();
+      refreshAll();
+    }
+
+    function refreshAll() {
+      const filtered = getFilteredFacilities();
+      renderRegionCards();
+      updateKPIs(filtered);
+      updateCharts(filtered);
+      renderTable(filtered);
+    }
+
+    function populateFilters() {
+      const regions = ["SBA", "Larkana", "Sukkur", "Mirpurkhas", "Karachi", "Hyderabad"];
+      const regSelect = document.getElementById("region-filter");
+      regions.forEach(reg => {
+        const count = RAW_FACILITIES.filter(f => f.r === reg).length;
+        const opt = document.createElement("option");
+        opt.value = reg;
+        opt.textContent = `${reg} (${count})`;
+        regSelect.appendChild(opt);
+      });
+      populateDistrictFilter("ALL");
+
+      const newCount = RAW_FACILITIES.filter(f => String(f.t).trim() === "1").length;
+      const existCount = RAW_FACILITIES.length - newCount;
+      const transSelect = document.getElementById("transition-filter");
+      transSelect.innerHTML = `
+        <option value="ALL">All Facility Types (${RAW_FACILITIES.length})</option>
+        <option value="1">Newly Taken HF [1] (${newCount})</option>
+        <option value="-">Existing HF [-] (${existCount})</option>
+      `;
+    }
+
+    function populateDistrictFilter(selectedRegion) {
+      const distSelect = document.getElementById("district-filter");
+      const currentDist = distSelect.value;
+      const relevant = selectedRegion === "ALL"
+        ? RAW_FACILITIES
+        : RAW_FACILITIES.filter(f => f.r === selectedRegion);
+
+      const districts = [...new Set(relevant.map(f => f.d))].sort();
+      distSelect.innerHTML = `<option value="ALL">All Districts (${districts.length})</option>` +
+        districts.map(d => `<option value="${d}">${d}</option>`).join("");
+
+      if (districts.includes(currentDist)) {
+        distSelect.value = currentDist;
+      }
+    }
+
+    function handleRegionDropdownChange() {
+      const reg = document.getElementById("region-filter").value;
+      populateDistrictFilter(reg);
+      currentPage = 1;
+      refreshAll();
+    }
+
+    function handleFilterChange() {
+      currentPage = 1;
+      refreshAll();
+    }
+
+    function toggleRegionFilter(reg) {
+      const regSelect = document.getElementById("region-filter");
+      regSelect.value = (regSelect.value === reg) ? "ALL" : reg;
+      populateDistrictFilter(regSelect.value);
+      currentPage = 1;
+      refreshAll();
+    }
+
+    function resetFilters() {
+      document.getElementById("search-input").value = "";
+      document.getElementById("region-filter").value = "ALL";
+      populateDistrictFilter("ALL");
+      document.getElementById("transition-filter").value = "ALL";
+      document.getElementById("wstatus-filter").value = "ALL";
+      document.getElementById("status-filter").value = "ALL";
+      currentPage = 1;
+      refreshAll();
+    }
+
+    function getFilteredFacilities() {
+      const search = document.getElementById("search-input").value.toLowerCase().trim();
+      const regionFilter = document.getElementById("region-filter").value;
+      const districtFilter = document.getElementById("district-filter").value;
+      const transitionFilter = document.getElementById("transition-filter").value;
+      const wStatusFilter = document.getElementById("wstatus-filter").value;
+      const statusFilter = document.getElementById("status-filter").value;
+
+      return RAW_FACILITIES.filter(f => {
+        if (regionFilter !== "ALL" && f.r !== regionFilter) return false;
+        if (districtFilter !== "ALL" && f.d !== districtFilter) return false;
+        if (transitionFilter !== "ALL" && String(f.t).trim() !== transitionFilter) return false;
+        if (wStatusFilter !== "ALL" && f.w !== wStatusFilter) return false;
+        if (search && !(
+          f.n.toLowerCase().includes(search) ||
+          f.c.toLowerCase().includes(search) ||
+          f.d.toLowerCase().includes(search)
+        )) return false;
+
+        const openCount = f.s.filter((st, idx) => isKnockOutStatus(st) && !contestations.some(c => c.facilityCode === f.c && c.paramIndex === idx)).length;
+        const staffKO = isKnockOutStatus(f.s[0]) && !contestations.some(c => c.facilityCode === f.c && c.paramIndex === 0);
+        const itemKO = f.s.slice(1).some((st, i) => isKnockOutStatus(st) && !contestations.some(c => c.facilityCode === f.c && c.paramIndex === (i + 1)));
+        const contestedCount = contestations.filter(c => c.facilityCode === f.c).length;
+
+        if (statusFilter === "KNOCKOUT" && openCount === 0) return false;
+        if (statusFilter === "STAFF_KO" && !staffKO) return false;
+        if (statusFilter === "ITEM_KO" && !itemKO) return false;
+        if (statusFilter === "CONTESTED" && contestedCount === 0) return false;
+        if (statusFilter === "COMPLIANT" && (openCount > 0 || contestedCount > 0)) return false;
+
+        return true;
+      });
+    }
+
+    function renderRegionCards() {
+      const regions = ["SBA", "Larkana", "Sukkur", "Mirpurkhas", "Karachi", "Hyderabad"];
+      const container = document.getElementById("region-cards");
+      const currentFilter = document.getElementById("region-filter").value;
+
+      container.innerHTML = regions.map(reg => {
+        const recs = RAW_FACILITIES.filter(f => f.r === reg);
+        let openKO = 0;
+        let contested = 0;
+        let newlyTakenCount = 0;
+        let existingCount = 0;
+        recs.forEach(f => {
+          if (String(f.t).trim() === "1") newlyTakenCount++;
+          else existingCount++;
+          f.s.forEach((st, idx) => {
+            if (isKnockOutStatus(st)) {
+              const isContested = contestations.some(c => c.facilityCode === f.c && c.paramIndex === idx);
+              if (isContested) contested++;
+              else openKO++;
+            }
+          });
+        });
+
+        const isSelected = currentFilter === reg;
+        return `
+          <button onclick="toggleRegionFilter('${reg}')" class="text-left p-3.5 rounded-xl border transition ${isSelected ? 'border-rose-500 bg-rose-50/70 ring-2 ring-rose-500/20 shadow-xs' : 'border-slate-200 bg-slate-50/50 hover:bg-white hover:shadow-xs'}">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-xs text-slate-900">${reg}</span>
+              <span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">${recs.length}</span>
+            </div>
+            <div class="mt-1.5 flex items-center gap-1.5 text-[10px] font-medium">
+              <span class="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200/70">New (1): ${newlyTakenCount}</span>
+              <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200/70">Existing (-): ${existingCount}</span>
+            </div>
+            <div class="mt-2 flex items-center justify-between text-[11px]">
+              <span class="text-rose-600 font-bold">${openKO} Open ✖</span>
+              <span class="text-amber-600 font-semibold">${contested} Contested</span>
+            </div>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function updateKPIs(filtered) {
+      let totalApplicable = 0;
+      let compliantOrContested = 0;
+      let openKnockOuts = 0;
+      let affectedFacilitiesSet = new Set();
+      let paramKnockOutCounts = new Array(ANC_PARAMS.length).fill(0);
+
+      let count66 = 0, count247 = 0, newlyTaken = 0, existingHF = 0;
+      filtered.forEach(f => {
+        if (f.w === "(6/6)") count66++;
+        else if (f.w === "(24/7)") count247++;
+        if (String(f.t).trim() === "1") newlyTaken++;
+        else existingHF++;
+
+        f.s.forEach((st, idx) => {
+          if (st === "✔") {
+            totalApplicable++;
+            compliantOrContested++;
+          } else if (isKnockOutStatus(st)) {
+            totalApplicable++;
+            const isContested = contestations.some(c => c.facilityCode === f.c && c.paramIndex === idx);
+            if (isContested) {
+              compliantOrContested++;
+            } else {
+              openKnockOuts++;
+              affectedFacilitiesSet.add(f.c);
+              paramKnockOutCounts[idx]++;
+            }
+          }
+        });
+      });
+
+      const relevantContestations = contestations.filter(c => filtered.some(f => f.c === c.facilityCode));
+      const verifiedCount = relevantContestations.filter(c => c.complianceStatus === "Compliance Verified").length;
+      const pendingCount = relevantContestations.length - verifiedCount;
+
+      const rate = totalApplicable ? ((compliantOrContested / totalApplicable) * 100).toFixed(1) : "100.0";
+
+      // Top knocked-out parameter
+      let maxIdx = 0;
+      paramKnockOutCounts.forEach((val, idx) => {
+        if (val > paramKnockOutCounts[maxIdx]) maxIdx = idx;
+      });
+
+      document.getElementById("kpi-total-facilities").textContent = filtered.length;
+      document.getElementById("kpi-facility-split").textContent = `${count66} (6/6) • ${count247} (24/7)`;
+      document.getElementById("kpi-transition-split").textContent = `${newlyTaken} Newly Taken (1) • ${existingHF} Existing (-)`;
+      document.getElementById("kpi-open-knockouts").textContent = openKnockOuts;
+      document.getElementById("kpi-affected-facilities").textContent = `across ${affectedFacilitiesSet.size} facilities`;
+      document.getElementById("kpi-contested-count").textContent = relevantContestations.length;
+      document.getElementById("kpi-verified-count").textContent = `${verifiedCount} verified • ${pendingCount} pending`;
+      document.getElementById("kpi-compliance-rate").textContent = `${rate}%`;
+      document.getElementById("kpi-compliance-bar").style.width = `${rate}%`;
+
+      document.getElementById("kpi-top-param").textContent = ANC_PARAMS[maxIdx].short;
+      document.getElementById("kpi-top-param").title = ANC_PARAMS[maxIdx].full;
+      document.getElementById("kpi-top-param-count").textContent = `${paramKnockOutCounts[maxIdx]} facilities knocked out`;
+      document.getElementById("active-filter-label").textContent = `Showing ${filtered.length} of ${RAW_FACILITIES.length} facilities`;
+    }
+
+    function updateCharts(filtered) {
+      const regions = ["SBA", "Larkana", "Sukkur", "Mirpurkhas", "Karachi", "Hyderabad"];
+      const regOpenKO = regions.map(reg => {
+        let sum = 0;
+        RAW_FACILITIES.filter(f => f.r === reg).forEach(f => {
+          f.s.forEach((st, idx) => {
+            if (isKnockOutStatus(st) && !contestations.some(c => c.facilityCode === f.c && c.paramIndex === idx)) sum++;
+          });
+        });
+        return sum;
+      });
+      const regContested = regions.map(reg => {
+        return contestations.filter(c => c.region === reg).length;
+      });
+
+      // 1. Regional Stacked Bar Chart
+      const ctxReg = document.getElementById("chart-regions").getContext("2d");
+      if (regionChart) regionChart.destroy();
+      regionChart = new Chart(ctxReg, {
+        type: "bar",
+        data: {
+          labels: regions,
+          datasets: [
+            {
+              label: "Open Knock-Outs (✖)",
+              data: regOpenKO,
+              backgroundColor: "#e11d48",
+              borderRadius: 5
+            },
+            {
+              label: "Contested (In Compliance)",
+              data: regContested,
+              backgroundColor: "#f59e0b",
+              borderRadius: 5
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } }
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+            y: { stacked: true, beginAtZero: true, ticks: { font: { size: 11 } } }
+          }
+        }
+      });
+
+      // 2. All 9 ANC/PNC Parameters Horizontal Bar
+      const paramStats = ANC_PARAMS.map((m, idx) => {
+        let open = 0;
+        filtered.forEach(f => {
+          if (isKnockOutStatus(f.s[idx]) && !contestations.some(c => c.facilityCode === f.c && c.paramIndex === idx)) {
+            open++;
+          }
+        });
+        return { label: m.short, count: open, isStaff: idx === 0 };
+      }).sort((a, b) => b.count - a.count);
+
+      const ctxParam = document.getElementById("chart-params").getContext("2d");
+      if (paramChart) paramChart.destroy();
+      paramChart = new Chart(ctxParam, {
+        type: "bar",
+        data: {
+          labels: paramStats.map(m => m.label),
+          datasets: [{
+            label: "Open Knock-Outs (✖)",
+            data: paramStats.map(m => m.count),
+            backgroundColor: paramStats.map(m => m.isStaff ? "#be123c" : "#0f766e"),
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { beginAtZero: true, ticks: { font: { size: 10 } } },
+            y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+          }
+        }
+      });
+
+      // 3. Parameter Breakdown Doughnut
+      let avail = 0, plainKO = 0, subDetailKO = 0, contested = 0;
+      filtered.forEach(f => {
+        f.s.forEach((st, idx) => {
+          if (st === "✔") avail++;
+          else if (isKnockOutStatus(st)) {
+            if (contestations.some(c => c.facilityCode === f.c && c.paramIndex === idx)) contested++;
+            else if (st === "✖") plainKO++;
+            else subDetailKO++;
+          }
+        });
+      });
+
+      const ctxBreak = document.getElementById("chart-breakdown").getContext("2d");
+      if (breakdownChart) breakdownChart.destroy();
+      breakdownChart = new Chart(ctxBreak, {
+        type: "doughnut",
+        data: {
+          labels: ["Available / Functional (✔)", "Unavailable (✖)", "No Strips / Non-Func (✖)", "Contested"],
+          datasets: [{
+            data: [avail, plainKO, subDetailKO, contested],
+            backgroundColor: ["#10b981", "#e11d48", "#fb7185", "#f59e0b"],
+            borderWidth: 2,
+            borderColor: "#ffffff"
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "62%",
+          plugins: {
+            legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10 } } }
+          }
+        }
+      });
+    }
+
+    function renderHeader() {
+      const tr = document.getElementById("table-header-row");
+      let html = `
+        <th class="py-3 px-3 sticky-col-1 bg-slate-100 border-r border-slate-200 min-w-[88px]">Code</th>
+        <th class="py-3 px-3 sticky-col-2 bg-slate-100 border-r border-slate-200 min-w-[200px]">Health Facility</th>
+        <th class="py-3 px-3 min-w-[105px]">Region</th>
+        <th class="py-3 px-3 min-w-[130px]">District</th>
+        <th class="py-3 px-3 min-w-[140px]">Transition</th>
+        <th class="py-3 px-3 min-w-[80px]">W.Status</th>
+        <th class="py-3 px-3 min-w-[125px]">Visit Date</th>
+        <th class="py-3 px-3 min-w-[125px] text-center">Contestation</th>
+      `;
+      ANC_PARAMS.forEach((m, i) => {
+        const badgeColor = i === 0 ? "text-rose-600 font-bold" : "text-slate-400 font-normal";
+        const tagLabel = i === 0 ? "Staff" : `Item ${i}`;
+        html += `<th class="py-2.5 px-2.5 text-center min-w-[115px] border-l border-slate-200/80" title="${m.full}">
+          <div class="text-[10px] ${badgeColor}">${tagLabel}</div>
+          <div class="leading-tight line-clamp-2">${m.short}</div>
+        </th>`;
+      });
+      tr.innerHTML = html;
+    }
+
+    function renderTable(filtered) {
+      const tbody = document.getElementById("table-body");
+      document.getElementById("badge-filtered-count").textContent = filtered.length;
+
+      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const startIdx = (currentPage - 1) * pageSize;
+      const endIdx = Math.min(startIdx + pageSize, filtered.length);
+      const pageItems = filtered.slice(startIdx, endIdx);
+
+      document.getElementById("pagination-info").textContent =
+        filtered.length === 0
+          ? "Showing 0 facilities"
+          : `Showing ${startIdx + 1} to ${endIdx} of ${filtered.length} facilities`;
+      document.getElementById("page-indicator").textContent = `Page ${currentPage} of ${totalPages}`;
+      document.getElementById("btn-prev-page").disabled = currentPage <= 1;
+      document.getElementById("btn-next-page").disabled = currentPage >= totalPages;
+
+      if (pageItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${8 + ANC_PARAMS.length}" class="py-12 text-center text-slate-500 text-sm">No matching facility records found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = pageItems.map(f => {
+        const openIndices = [];
+        const contestedItems = contestations.filter(c => c.facilityCode === f.c);
+        f.s.forEach((st, idx) => {
+          if (isKnockOutStatus(st) && !contestedItems.some(c => c.paramIndex === idx)) {
+            openIndices.push(idx);
+          }
+        });
+
+        let actionCell = "";
+        if (openIndices.length > 0) {
+          actionCell = `
+            <button onclick="openContestationModal('${f.c}', ${openIndices[0]})" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[11px] shadow-2xs transition inline-flex items-center gap-1">
+              <span>Contest (${openIndices.length})</span>
+            </button>
+          `;
+        } else if (contestedItems.length > 0) {
+          actionCell = `
+            <button onclick="switchTab('compliance')" class="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold text-[11px] transition">
+              In Compliance (${contestedItems.length})
+            </button>
+          `;
+        } else {
+          actionCell = `<span class="text-[11px] font-semibold text-emerald-600">✓ Compliant</span>`;
+        }
+
+        const paramCells = f.s.map((st, idx) => {
+          const existingCont = contestations.find(c => c.facilityCode === f.c && c.paramIndex === idx);
+          if (existingCont) {
+            const isVerified = existingCont.complianceStatus === "Compliance Verified";
+            return `
+              <td onclick="switchTab('compliance')" title="Contested: ${existingCont.reason} (Click to inspect in Compliance)" class="py-2 px-2 text-center border-l border-slate-100 cursor-pointer ${isVerified ? 'bg-emerald-50/80' : 'bg-amber-50/90'}">
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${isVerified ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-200/80 text-amber-900'}">
+                  ${isVerified ? '✔ Verified' : '⏳ Contested'}
+                </span>
+              </td>
+            `;
+          }
+          if (st === "✔") {
+            return `<td class="py-2 px-2 text-center border-l border-slate-100 text-emerald-600 font-bold">✔</td>`;
+          }
+          if (isKnockOutStatus(st)) {
+            const subNote = st.length > 1 ? st.replace("✖", "").trim() : "";
+            return `
+              <td onclick="openContestationModal('${f.c}', ${idx})" title="Click to Contest Knocked-Out Parameter: ${ANC_PARAMS[idx].full} (${st})" class="py-2 px-2 text-center border-l border-slate-100 bg-rose-50/60 hover:bg-rose-100 cursor-pointer transition">
+                ${subNote
+                  ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 font-bold text-[10px] whitespace-nowrap">✖ ${subNote.replace(/[()]/g, '')}</span>`
+                  : `<span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-rose-100 text-rose-700 font-bold">✖</span>`
+                }
+              </td>
+            `;
+          }
+          return `<td class="py-2 px-2 text-center border-l border-slate-100 text-slate-400">-</td>`;
+        }).join("");
+
+        return `
+          <tr class="bg-white hover:bg-slate-50 transition group">
+            <td class="py-2.5 px-3 sticky-col-1 bg-white group-hover:bg-slate-50 border-r border-slate-200 font-mono font-semibold text-slate-700">${f.c}</td>
+            <td class="py-2.5 px-3 sticky-col-2 bg-white group-hover:bg-slate-50 border-r border-slate-200 font-semibold text-slate-900">${f.n}</td>
+            <td class="py-2.5 px-3 font-medium text-slate-700">${f.r}</td>
+            <td class="py-2.5 px-3 text-slate-600">${f.d}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap">${
+              String(f.t).trim() === "1"
+                ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold text-[11px]"><span class="font-mono font-bold">1</span> Newly Taken</span>`
+                : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 font-medium text-[11px]"><span class="font-mono font-bold">-</span> Existing</span>`
+            }</td>
+            <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">${f.w}</span></td>
+            <td class="py-2.5 px-3 text-slate-500 whitespace-nowrap">${f.v}</td>
+            <td class="py-2.5 px-3 text-center">${actionCell}</td>
+            ${paramCells}
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function changePageSize() {
+      pageSize = parseInt(document.getElementById("page-size").value, 10);
+      currentPage = 1;
+      renderTable(getFilteredFacilities());
+    }
+
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTable(getFilteredFacilities());
+      }
+    }
+
+    function nextPage() {
+      const totalPages = Math.ceil(getFilteredFacilities().length / pageSize);
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderTable(getFilteredFacilities());
+      }
+    }
+
+    // Modal Logic with Dual Reason Lists (Staff vs ANC Equipment/Strips)
+    function openContestationModal(facilityCode, preselectParamIdx = null) {
+      const facility = RAW_FACILITIES.find(f => f.c === facilityCode);
+      if (!facility) return;
+
+      activeFacilityCode = facilityCode;
+      selectedFiles = [];
+      document.getElementById("contestation-form").reset();
+      document.getElementById("modal-file-list").textContent = "";
+
+      document.getElementById("modal-facility-name").textContent = `${facility.n} (${facility.c})`;
+      document.getElementById("modal-region-district").textContent = `${facility.r} • ${facility.d}`;
+      const isNewHF = String(facility.t).trim() === "1";
+      document.getElementById("modal-transition-badge").innerHTML = isNewHF
+        ? `<span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-[11px]">1 — Newly Taken HF</span>`
+        : `<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-[11px]">- — Existing HF</span>`;
+      document.getElementById("modal-visit-date").textContent = facility.v;
+
+      const totalKO = facility.s.filter(s => isKnockOutStatus(s)).length;
+      const uncontestedKO = [];
+      facility.s.forEach((st, idx) => {
+        if (isKnockOutStatus(st) && !contestations.some(c => c.facilityCode === facility.c && c.paramIndex === idx)) {
+          uncontestedKO.push({ idx, param: ANC_PARAMS[idx], rawStatus: st });
+        }
+      });
+
+      const subSelect = document.getElementById("modal-subparam-select");
+      subSelect.innerHTML = `<option value="">-- Select knocked-out sub-parameter --</option>` +
+        uncontestedKO.map(item => {
+          const detail = item.rawStatus !== "✖" ? ` [${item.rawStatus}]` : "";
+          return `<option value="${item.idx}">${item.param.full}${detail}</option>`;
+        }).join("");
+
+      document.getElementById("modal-remaining-count").textContent =
+        `${uncontestedKO.length} of ${totalKO} knocked-out items left to contest`;
+
+      if (preselectParamIdx !== null && uncontestedKO.some(i => i.idx === preselectParamIdx)) {
+        subSelect.value = String(preselectParamIdx);
+      } else if (uncontestedKO.length === 1) {
+        subSelect.value = String(uncontestedKO[0].idx);
+      }
+
+      handleSubParamChange();
+
+      const modal = document.getElementById("contestation-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function handleSubParamChange() {
+      const subVal = document.getElementById("modal-subparam-select").value;
+      const reasonSelect = document.getElementById("modal-reason-select");
+      const catTag = document.getElementById("modal-reason-category-tag");
+      const domainBadge = document.getElementById("modal-domain-badge");
+
+      if (subVal === "") {
+        reasonSelect.innerHTML = `<option value="">-- Select a sub-parameter first --</option>`;
+        catTag.textContent = "Select Sub-Parameter";
+        catTag.className = "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600";
+        domainBadge.innerHTML = `<span>✕</span> ANC / PNC Service Readiness`;
+        return;
+      }
+
+      const idx = parseInt(subVal, 10);
+      const isStaff = idx === 0;
+      const reasonsList = isStaff ? STAFF_REASONS : ITEM_REASONS;
+
+      if (isStaff) {
+        catTag.textContent = "Staff Non-Availability Reasons";
+        catTag.className = "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-100 text-purple-800";
+        domainBadge.innerHTML = `<span>✕</span> ANC/PNC Human Resource (Staff)`;
+      } else {
+        catTag.textContent = "Short / Non-Functional Item Reasons";
+        catTag.className = "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-teal-100 text-teal-800";
+        domainBadge.innerHTML = `<span>✕</span> ANC/PNC Equipment & Consumables`;
+      }
+
+      reasonSelect.innerHTML = `<option value="">-- Select primary reason (${reasonsList.length} options) --</option>` +
+        reasonsList.map(r => `<option value="${r}">${r}</option>`).join("");
+    }
+
+    function handleFileSelect(event) {
+      const files = Array.from(event.target.files).slice(0, 5);
+      selectedFiles = files.map(f => f.name);
+      document.getElementById("modal-file-list").textContent =
+        selectedFiles.length ? `Selected (${selectedFiles.length}): ${selectedFiles.join(", ")}` : "";
+    }
+
+    function closeModal() {
+      const modal = document.getElementById("contestation-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+      activeFacilityCode = null;
+    }
+
+    function submitContestation(event) {
+      event.preventDefault();
+      if (!activeFacilityCode) return;
+
+      const facility = RAW_FACILITIES.find(f => f.c === activeFacilityCode);
+      const paramIndex = parseInt(document.getElementById("modal-subparam-select").value, 10);
+      const reason = document.getElementById("modal-reason-select").value;
+      const officerName = document.getElementById("modal-officer-name").value.trim();
+      const officerRole = document.getElementById("modal-officer-role").value.trim();
+      const evidenceRef = document.getElementById("modal-evidence-ref").value.trim();
+      const remarks = document.getElementById("modal-remarks").value.trim();
+
+      const rawStatus = facility.s[paramIndex];
+      const paramLabel = rawStatus !== "✖" ? `${ANC_PARAMS[paramIndex].full} (${rawStatus})` : ANC_PARAMS[paramIndex].full;
+
+      const newEntry = {
+        id: "ANC-" + String(1001 + contestations.length),
+        facilityCode: facility.c,
+        facilityName: facility.n,
+        region: facility.r,
+        district: facility.d,
+        transition: String(facility.t).trim(),
+        visitDate: facility.v,
+        paramIndex,
+        category: ANC_PARAMS[paramIndex].category,
+        paramName: paramLabel,
+        reason,
+        officerName,
+        officerRole,
+        evidenceRef: evidenceRef || "Not specified",
+        attachedFiles: [...selectedFiles],
+        remarks,
+        submittedAt: new Date().toLocaleString(),
+        complianceStatus: "Compliance Provided"
+      };
+
+      contestations.unshift(newEntry);
+      closeModal();
+      refreshAll();
+      renderComplianceTable();
+      showToast(`Contestation ${newEntry.id} saved & routed to Compliance!`);
+    }
+
+    function renderComplianceTable() {
+      const emptyState = document.getElementById("compliance-empty-state");
+      const tableWrapper = document.getElementById("compliance-table-wrapper");
+      const tbody = document.getElementById("compliance-tbody");
+      document.getElementById("badge-compliance-count").textContent = contestations.length;
+
+      if (contestations.length === 0) {
+        emptyState.classList.remove("hidden");
+        tableWrapper.classList.add("hidden");
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+      tableWrapper.classList.remove("hidden");
+
+      tbody.innerHTML = contestations.map((c, index) => {
+        const isVerified = c.complianceStatus === "Compliance Verified";
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-3.5 px-4 font-mono font-bold text-slate-900">${c.id}</td>
+            <td class="py-3.5 px-4">
+              <div class="font-bold text-slate-900">${c.facilityName} (${c.facilityCode})</div>
+              <div class="text-[11px] text-slate-500">${c.region} • ${c.district} • <span class="font-semibold ${c.transition === '1' ? 'text-indigo-600' : 'text-slate-600'}">${c.transition === '1' ? 'Newly Taken (1)' : 'Existing (-)'}</span></div>
+            </td>
+            <td class="py-3.5 px-4">
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-rose-50 text-rose-700 font-semibold border border-rose-200">
+                ${c.paramName}
+              </span>
+              <div class="text-[10px] text-slate-400 mt-1">${c.category}</div>
+            </td>
+            <td class="py-3.5 px-4 font-semibold text-slate-800">${c.reason}</td>
+            <td class="py-3.5 px-4">
+              <div class="font-semibold text-slate-900">${c.officerName}</div>
+              <div class="text-[11px] text-slate-500">${c.officerRole}</div>
+            </td>
+            <td class="py-3.5 px-4 max-w-xs">
+              <div class="text-slate-700 leading-relaxed">${c.remarks}</div>
+              <div class="text-[11px] text-teal-700 font-semibold mt-1">Ref: ${c.evidenceRef}</div>
+              ${c.attachedFiles.length ? `<div class="text-[11px] text-slate-500 mt-0.5">📎 ${c.attachedFiles.join(", ")}</div>` : ""}
+            </td>
+            <td class="py-3.5 px-4">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${isVerified ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                ${c.complianceStatus}
+              </span>
+              <div class="text-[10px] text-slate-400 mt-1">${c.submittedAt}</div>
+            </td>
+            <td class="py-3.5 px-4 text-right">
+              ${!isVerified ? `
+                <button onclick="verifyCompliance(${index})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] shadow-2xs transition">
+                  Verify Compliance
+                </button>
+              ` : `<span class="text-emerald-600 font-bold text-[11px]">✓ Verified</span>`}
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function verifyCompliance(index) {
+      contestations[index].complianceStatus = "Compliance Verified";
+      renderComplianceTable();
+      refreshAll();
+      showToast(`${contestations[index].id} marked as Compliance Verified.`);
+    }
+
+    function switchTab(tab) {
+      const btnAss = document.getElementById("tab-btn-assessment");
+      const btnComp = document.getElementById("tab-btn-compliance");
+      const viewAss = document.getElementById("view-assessment");
+      const viewComp = document.getElementById("view-compliance");
+      const filters = document.getElementById("assessment-filters");
+
+      if (tab === "assessment") {
+        btnAss.className = "pb-3.5 text-sm font-bold border-b-2 border-rose-600 text-rose-600 transition flex items-center gap-2";
+        btnComp.className = "pb-3.5 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-2";
+        viewAss.classList.remove("hidden");
+        viewComp.classList.add("hidden");
+        filters.classList.remove("hidden");
+      } else {
+        btnComp.className = "pb-3.5 text-sm font-bold border-b-2 border-rose-600 text-rose-600 transition flex items-center gap-2";
+        btnAss.className = "pb-3.5 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-2";
+        viewComp.classList.remove("hidden");
+        viewAss.classList.add("hidden");
+        filters.classList.add("hidden");
+        renderComplianceTable();
+      }
+    }
+
+    function exportComplianceCSV() {
+      const headers = [
+        "Facility Code", "Region", "Dis", "W.Status", "Facility Name", "Transitioned", "Visit date & time",
+        "Staff Availability", "Reason (Staff Contestation)",
+        "Pregnancy strips", "Urine albumin strips", "Fetoscope", "Adult Weight machine",
+        "Baby Weight machine", "Glucometer", "HB meter", "BP apparatus",
+        "Reason (ANC Equipment/Item Contestations)"
+      ];
+
+      const rows = RAW_FACILITIES.map(f => {
+        const staffCont = contestations.find(c => c.facilityCode === f.c && c.paramIndex === 0);
+        const staffStatusCell = staffCont ? "Contested" : `"${f.s[0]}"`;
+        const staffReasonCell = staffCont
+          ? `"${staffCont.reason} | Officer: ${staffCont.officerName} (${staffCont.officerRole}) | Ref: ${staffCont.evidenceRef} | Remarks: ${staffCont.remarks} | Status: ${staffCont.complianceStatus}"`
+          : `""`;
+
+        const itemStatusCells = [];
+        const itemNotes = [];
+        for (let idx = 1; idx < ANC_PARAMS.length; idx++) {
+          const cont = contestations.find(c => c.facilityCode === f.c && c.paramIndex === idx);
+          if (cont) {
+            itemStatusCells.push("Contested");
+            itemNotes.push(`[${ANC_PARAMS[idx].short}: ${cont.reason} | ${cont.officerName} (${cont.officerRole}) | Ref: ${cont.evidenceRef} | ${cont.remarks} | ${cont.complianceStatus}]`);
+          } else {
+            itemStatusCells.push(`"${f.s[idx]}"`);
+          }
+        }
+
+        const row = [
+          f.c, `"${f.r}"`, `"${f.d}"`, `"${f.w}"`, `"${f.n}"`, `"${f.t}"`, `"${f.v}"`,
+          staffStatusCell, staffReasonCell,
+          ...itemStatusCells,
+          `"${itemNotes.join(' ; ')}"`
+        ];
+        return row.join(",");
+      });
+
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "Justification_Sheet_ANC_PNC_Compliance_49_Records.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toast-msg").textContent = msg;
+      toast.classList.remove("hidden");
+      toast.classList.add("flex");
+      setTimeout(() => {
+        toast.classList.add("hidden");
+        toast.classList.remove("flex");
+      }, 3500);
+    }
+
+    init();
+  </script>
+</body>
+</html>

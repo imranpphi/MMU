@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Family Planning Commodity Availability &amp; Contestation Dashboard</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Chart.js for Visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- SheetJS for Excel/CSV Import -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+
+    /* Stage Badges for Cell Lifecycle: ✖ -> Contested -> ✔ */
+    .badge-ok {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #dcfce7;
+      color: #166534;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      border: 1px solid #bbf7d0;
+    }
+
+    .badge-verified {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #d1fae5;
+      color: #065f46;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      border: 1px solid #10b981;
+      box-shadow: 0 1px 2px rgba(16, 185, 129, 0.15);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .badge-verified:hover {
+      background: #a7f3d0;
+      transform: translateY(-1px);
+    }
+
+    .badge-no {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #fee2e2;
+      color: #991b1b;
+      font-weight: 700;
+      padding: 3px 11px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      border: 1px solid #fca5a5;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .badge-no:hover {
+      background: #fecaca;
+      border-color: #ef4444;
+      transform: scale(1.08);
+      box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
+    }
+
+    .badge-contested {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #f59e0b;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 3px rgba(245, 158, 11, 0.2);
+    }
+    .badge-contested:hover {
+      background: #fde68a;
+      transform: scale(1.05);
+    }
+
+    .badge-na {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #f1f5f9;
+      color: #64748b;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+    }
+
+    th, td {
+      white-space: nowrap;
+    }
+
+    /* Custom subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Toast Notification Banner (No alert() used) -->
+  <div id="toastNotification" class="fixed bottom-5 right-5 z-50 hidden max-w-md bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 text-xs flex items-center gap-3 transition-all">
+    <span id="toastIcon" class="text-base">✅</span>
+    <span id="toastMessage" class="font-medium leading-relaxed"></span>
+  </div>
+
+  <!-- Top Navigation Header -->
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-[1640px] mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight">Family Planning Commodity Availability &amp; Contestation Dashboard</h1>
+        </div>
+        <p class="text-[11px] sm:text-xs text-slate-400 mt-0.5">
+          Click any <span class="text-rose-300 font-bold">✖</span> cell to submit a contestation &rarr; Status becomes <span class="text-amber-300 font-bold">⚑ Contested</span> &rarr; Verify in compliance to mark as <span class="text-emerald-300 font-bold">✔</span>
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-medium px-3 py-2 rounded-xl transition flex items-center gap-1.5">
+          <span>📂 Load Full .xlsx / .csv</span>
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hidden" />
+        </label>
+        <button id="exportAuditBtn" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3 py-2 rounded-xl transition shadow-sm">
+          ⚑ Export Audit Log (<span id="auditCountBadge">0</span>)
+        </button>
+        <button id="exportFilteredBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-xl transition shadow-sm">
+          ⬇ Export Filtered CSV
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1640px] w-full mx-auto px-4 py-5 space-y-5 flex-1">
+
+    <!-- Workflow Guide & Dataset Banner -->
+    <section class="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 rounded-2xl shadow-sm border border-slate-700 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div class="space-y-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-[11px] font-semibold">15 / 15 Columns Preserved</span>
+          <span id="loadedCountLabel" class="text-xs text-slate-300">Showing <strong>45 representative facilities</strong> across all 6 regions (Upload <code>Dashboard data - Family Planning.xlsx</code> to load all 1,339 records)</span>
+        </div>
+        <p class="text-xs text-slate-400">
+          Interactive Cell Compliance Pipeline:
+          <span class="inline-flex items-center gap-1.5 ml-1">
+            <span class="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40">1. Click ✖</span>
+            <span>&rarr;</span>
+            <span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">2. Submit Contestation (⚑ Contested)</span>
+            <span>&rarr;</span>
+            <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">3. Verify in Compliance (✔)</span>
+          </span>
+        </p>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="quickFilterStockoutsBtn" class="px-3 py-2 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white text-xs font-semibold transition">
+          Show Only ✖ Stockouts
+        </button>
+        <button id="quickFilterContestedBtn" class="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition">
+          Pending Contested (<span id="bannerPendingCount">0</span>)
+        </button>
+      </div>
+    </section>
+
+    <!-- Multi-Dimensional Filter Controls -->
+    <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Region</label>
+          <select id="filterRegion" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-slate-800">
+            <option value="ALL">All Regions</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">District</label>
+          <select id="filterDistrict" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-slate-800">
+            <option value="ALL">All Districts</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">W.Status</label>
+          <select id="filterWStatus" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-slate-800">
+            <option value="ALL">All Schedules</option>
+            <option value="(6/6)">(6/6)</option>
+            <option value="(24/7)">(24/7)</option>
+            <option value="(12/7)">(12/7)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Transitioned</label>
+          <select id="filterTransitioned" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-slate-800">
+            <option value="ALL">All Facilities</option>
+            <option value="1">Transitioned (1)</option>
+            <option value="-">Non-Transitioned (-)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Compliance / Audit Stage</label>
+          <select id="filterAvail" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-slate-800">
+            <option value="ALL">All Statuses</option>
+            <option value="✔">Compliant (✔)</option>
+            <option value="✖">Has Stockout (✖)</option>
+            <option value="CONTESTED">⚑ Contested (Pending Verification)</option>
+            <option value="VERIFIED">✔ Verified via Contestation</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Search Facility / Code</label>
+          <div class="flex gap-1.5">
+            <input type="text" id="searchInput" placeholder="Facility name or code..." class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-slate-800" />
+            <button id="resetFiltersBtn" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition" title="Reset All Filters">↺</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dynamic KPI Summary Cards -->
+    <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <p class="text-xs font-medium text-slate-500">Filtered Facilities</p>
+        <p id="kpiTotal" class="text-2xl font-extrabold text-slate-900 mt-1">0</p>
+        <p class="text-[11px] text-slate-400 mt-0.5">All 15 columns active</p>
+      </div>
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-200 bg-emerald-50/20">
+        <p class="text-xs font-medium text-emerald-800">Contraceptive Availability (✔)</p>
+        <p id="kpiAvailRate" class="text-2xl font-extrabold text-emerald-600 mt-1">0%</p>
+        <p id="kpiAvailCount" class="text-[11px] text-emerald-700 mt-0.5">0 compliant facilities</p>
+      </div>
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-rose-200 bg-rose-50/20">
+        <p class="text-xs font-medium text-rose-800">Facilities with ✖ Stockouts</p>
+        <p id="kpiStockoutCount" class="text-2xl font-extrabold text-rose-600 mt-1">0</p>
+        <p id="kpiStockoutRate" class="text-[11px] text-rose-700 mt-0.5">Click any ✖ in table to contest</p>
+      </div>
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-amber-200 bg-amber-50/30">
+        <p class="text-xs font-medium text-amber-800">⚑ Contested (Pending Verify)</p>
+        <p id="kpiContested" class="text-2xl font-extrabold text-amber-600 mt-1">0</p>
+        <p class="text-[11px] text-amber-700 mt-0.5">Click Contested badge to verify</p>
+      </div>
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-teal-200 bg-teal-50/30">
+        <p class="text-xs font-medium text-teal-800">✔ Verified in Compliance</p>
+        <p id="kpiVerified" class="text-2xl font-extrabold text-teal-600 mt-1">0</p>
+        <p class="text-[11px] text-teal-700 mt-0.5">Resolved from ✖ &rarr; ✔</p>
+      </div>
+    </section>
+
+    <!-- Analytical Charts Grid -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">Regional Contraceptive Availability (%)</h2>
+        <div class="h-60">
+          <canvas id="regionChart"></canvas>
+        </div>
+      </div>
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">Commodity Status (✔ vs Contested vs ✖ vs -)</h2>
+        <div class="h-60">
+          <canvas id="commodityChart"></canvas>
+        </div>
+      </div>
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">Schedule (W.Status) &amp; Transition Compliance</h2>
+        <div class="h-60">
+          <canvas id="scheduleChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Full 15-Column Data Grid -->
+    <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="px-4 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
+        <div>
+          <h2 class="text-sm font-bold text-slate-900">Facility Inspection Records — All 15 Columns</h2>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Click directly on any red <span class="font-bold text-rose-700">✖</span> cell to contest that commodity, or click an amber <span class="font-bold text-amber-700">⚑ Contested</span> cell to verify it into compliance (<span class="font-bold text-emerald-700">✔</span>).
+          </p>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span id="tablePageInfo" class="text-slate-600 font-semibold">Showing 0–0 of 0</span>
+          <button id="prevPageBtn" class="px-3 py-1.5 border border-slate-300 rounded-xl bg-white hover:bg-slate-100 disabled:opacity-40 font-medium transition">Prev</button>
+          <button id="nextPageBtn" class="px-3 py-1.5 border border-slate-300 rounded-xl bg-white hover:bg-slate-100 disabled:opacity-40 font-medium transition">Next</button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-100 text-slate-700 border-b border-slate-200 font-semibold">
+              <th class="py-3 px-3">District</th>
+              <th class="py-3 px-3">Facility Code</th>
+              <th class="py-3 px-3">Region</th>
+              <th class="py-3 px-3">District.1</th>
+              <th class="py-3 px-3">Facility Name</th>
+              <th class="py-3 px-3">W.Status</th>
+              <th class="py-3 px-3 text-center">Transitioned</th>
+              <th class="py-3 px-3">Date and time of visit</th>
+              <th class="py-3 px-3 text-center">Rubber condoms</th>
+              <th class="py-3 px-3 text-center">POP / COC pills</th>
+              <th class="py-3 px-3 text-center">ECP</th>
+              <th class="py-3 px-3 text-center">Injection - Depo / Sayana Press</th>
+              <th class="py-3 px-3 text-center">IUCD</th>
+              <th class="py-3 px-3 text-center">Implants</th>
+              <th class="py-3 px-3 text-center bg-slate-200/60">Contraceptive availability, %</th>
+            </tr>
+          </thead>
+          <tbody id="recordsTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Cell-Level Contestation & Compliance Verification Modal -->
+  <div id="contestModal" class="fixed inset-0 bg-slate-900/65 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-fadeIn">
+      <!-- Modal Header -->
+      <div id="modalHeaderBar" class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="modalStagePill" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-400/40">Stage 1: Contest Stockout (✖)</span>
+          </div>
+          <h3 id="modalTitle" class="text-sm font-bold mt-1">Contest Commodity Stockout</h3>
+          <p id="modalFacilitySubtitle" class="text-xs text-slate-300 mt-0.5"></p>
+        </div>
+        <button id="closeModalBtn" class="text-slate-400 hover:text-white text-xl font-bold px-2">&times;</button>
+      </div>
+
+      <form id="contestForm" class="p-5 space-y-4 text-xs">
+        <input type="hidden" id="contestRowIdx" />
+        <input type="hidden" id="contestColName" />
+
+        <!-- Facility & Selected Cell Metadata Box -->
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+          <div class="flex flex-wrap justify-between gap-2">
+            <div><span class="text-slate-500">Region / District:</span> <strong id="modalRegDist" class="text-slate-800"></strong></div>
+            <div><span class="text-slate-500">Schedule / Trans.:</span> <strong id="modalSchedTrans" class="text-slate-800"></strong></div>
+          </div>
+          <div><span class="text-slate-500">Visit Timestamp:</span> <strong id="modalTimestamp" class="font-mono text-slate-800"></strong></div>
+          <div class="pt-2 border-t border-slate-200 flex items-center justify-between">
+            <div>
+              <span class="text-slate-500">Selected Column:</span>
+              <span id="modalSelectedColumnBadge" class="ml-1 px-2.5 py-0.5 rounded-lg bg-slate-800 text-white font-semibold"></span>
+            </div>
+            <div>
+              <span class="text-slate-500 mr-1">Current Cell:</span>
+              <span id="modalCurrentCellStatus"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contestation Details Inputs -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Contestation Reason / Ground</label>
+          <select id="contestReason" class="w-full border border-slate-300 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-slate-800">
+            <option value="Stock Available in Store / Bin Card Verified">Stock Available in Store / Bin Card Verified</option>
+            <option value="Restocked Immediately Following Inspection">Restocked Immediately Following Inspection</option>
+            <option value="Data Entry / Sync Error During Field Visit">Data Entry / Sync Error During Field Visit</option>
+            <option value="Commodity Not Applicable at Facility Tier (-)">Commodity Not Applicable at Facility Tier (-)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Stock Register / Evidence Reference</label>
+          <input type="text" id="contestReference" placeholder="e.g., Bin Card #42, Closing Balance: 180 units" class="w-full border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-800" />
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Auditor / District Focal Person Remarks <span class="text-rose-500">*</span></label>
+          <textarea id="contestRemarks" rows="3" required placeholder="Provide justification for contesting this ✖ entry..." class="w-full border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-800"></textarea>
+        </div>
+
+        <!-- Dynamic Action Footer based on Stage -->
+        <div id="modalFooterActions" class="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+          <!-- Populated dynamically by JS for Stage 1 (Submit Contestation) vs Stage 2 (Verify in Compliance -> ✔ / Update / Revert) vs Stage 3 (Verified -> Revert) -->
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Exact 15 columns from sheet 'FP'
+    const ALL_COLUMNS = [
+      "District", "Facility Code", "Region", "District.1", "Facility Name",
+      "W.Status", "Transitioned", "Date and time of visit",
+      "Rubber condoms", "POP / COC pills", "ECP",
+      "Injection - Depo / Sayana Press", "IUCD", "Implants",
+      "Contraceptive availability, %"
+    ];
+
+    const COMMODITY_COLS = [
+      "Rubber condoms", "POP / COC pills", "ECP",
+      "Injection - Depo / Sayana Press", "IUCD", "Implants"
+    ];
+
+    const STATUS_COLS = [...COMMODITY_COLS, "Contraceptive availability, %"];
+
+    // Rich representative dataset across all 6 regions, multiple districts, schedules, and ✖ stockout scenarios
+    const INITIAL_DATA = [
+      {"District":"Badin","Facility Code":"211022","Region":"Mirpurkhas","District.1":"Badin - B","Facility Name":"BHU Mir Muhammad Nizamani","W.Status":"(6/6)","Transitioned":"-","Date and time of visit":"2026-10-16 11:34:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Badin","Facility Code":"211095","Region":"Mirpurkhas","District.1":"Badin - B","Facility Name":"DCD Madina Farm","W.Status":"(6/6)","Transitioned":"-","Date and time of visit":"2026-10-10 08:56:00","Rubber condoms":"✔","POP / COC pills":"✖","ECP":"✔","Injection - Depo / Sayana Press":"-","IUCD":"-","Implants":"-","Contraceptive availability, %":"✖"},
+      {"District":"Badin","Facility Code":"211049","Region":"Mirpurkhas","District.1":"Badin - A","Facility Name":"BHU Ali Murad Chandio","W.Status":"(6/6)","Transitioned":"-","Date and time of visit":"2026-10-29 12:28:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Badin","Facility Code":"211124","Region":"Mirpurkhas","District.1":"Badin - B","Facility Name":"BHU Ashraf Samoon","W.Status":"(6/6)","Transitioned":"1","Date and time of visit":"2026-10-20 10:10:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Badin","Facility Code":"211054","Region":"Mirpurkhas","District.1":"Badin - A","Facility Name":"BHU Dadah","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-24 08:31:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Badin","Facility Code":"211127","Region":"Mirpurkhas","District.1":"Badin - B","Facility Name":"GD Peeru Lashari","W.Status":"(6/6)","Transitioned":"1","Date and time of visit":"2026-10-22 08:11:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"-","IUCD":"-","Implants":"-","Contraceptive availability, %":"✔"},
+      {"District":"Badin","Facility Code":"211120","Region":"Mirpurkhas","District.1":"Badin - A","Facility Name":"ED Ghulam Mohammad kamboh","W.Status":"(6/6)","Transitioned":"-","Date and time of visit":"2026-10-15 09:26:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✖","Injection - Depo / Sayana Press":"-","IUCD":"-","Implants":"-","Contraceptive availability, %":"✖"},
+      {"District":"Tharparkar","Facility Code":"253010","Region":"Mirpurkhas","District.1":"Tharparkar - A","Facility Name":"BHU Kot Arbab Mir Mohammed","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-20 11:07:00","Rubber condoms":"✖","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✖","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✖"},
+      {"District":"Tharparkar","Facility Code":"253067","Region":"Mirpurkhas","District.1":"Tharparkar - A","Facility Name":"BHU Mitho Dabhro","W.Status":"(6/6)","Transitioned":"1","Date and time of visit":"2026-10-13 11:16:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✖","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✖"},
+      {"District":"Umerkot","Facility Code":"254097","Region":"Mirpurkhas","District.1":"Umar Kot","Facility Name":"GD Gamori Kori paro","W.Status":"(6/6)","Transitioned":"1","Date and time of visit":"2026-10-31 10:12:00","Rubber condoms":"✖","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"-","IUCD":"-","Implants":"-","Contraceptive availability, %":"✖"},
+      {"District":"Umerkot","Facility Code":"254045","Region":"Mirpurkhas","District.1":"Umar Kot","Facility Name":"BHU Ahori Farm","W.Status":"(6/6)","Transitioned":"-","Date and time of visit":"2026-10-23 09:11:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Dadu","Facility Code":"212041","Region":"Larkana","District.1":"Dadu","Facility Name":"Bali Shah","W.Status":"(6/6)","Transitioned":"1","Date and time of visit":"2026-10-26 13:52:00","Rubber condoms":"✖","POP / COC pills":"✔","ECP":"✖","Injection - Depo / Sayana Press":"✔","IUCD":"✖","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Dadu","Facility Code":"212043","Region":"Larkana","District.1":"Dadu","Facility Name":"Sawaro","W.Status":"(6/6)","Transitioned":"1","Date and time of visit":"2026-10-28 12:32:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Dadu","Facility Code":"212039","Region":"Larkana","District.1":"Dadu","Facility Name":"BHU Aghamani","W.Status":"(6/6)","Transitioned":"-","Date and time of visit":"2026-10-26 12:50:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Kamber","Facility Code":"234029","Region":"Larkana","District.1":"Kamber","Facility Name":"BHU Arzi Bhutto","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-13 08:16:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Larkana","Facility Code":"232008","Region":"Larkana","District.1":"Larkana - B","Facility Name":"BHU New Gud","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-22 11:37:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Larkana","Facility Code":"232088","Region":"Larkana","District.1":"Larkana - B","Facility Name":"GD Dodo Sanheri","W.Status":"(6/6)","Transitioned":"-","Date and time of visit":"2026-10-26 10:40:00","Rubber condoms":"✖","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"-","IUCD":"-","Implants":"-","Contraceptive availability, %":"✖"},
+      {"District":"Larkana","Facility Code":"232021","Region":"Larkana","District.1":"Larkana - B","Facility Name":"BHU Akil","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-07 11:38:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Kashmore","Facility Code":"235008","Region":"Larkana","District.1":"Kashmore","Facility Name":"MCH Center Kashmore","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-06 10:33:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Naushero Feroz","Facility Code":"242041","Region":"SBA","District.1":"Naushero Feroze -A","Facility Name":"BHU Deparja","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-03 13:03:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✖","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Naushero Feroz","Facility Code":"242004","Region":"SBA","District.1":"Naushero Feroze - B","Facility Name":"RHC Bhiria City","W.Status":"(24/7)","Transitioned":"1","Date and time of visit":"2026-10-01 10:08:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✖","IUCD":"✔","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Naushero Feroz","Facility Code":"242014","Region":"SBA","District.1":"Naushero Feroze -A","Facility Name":"RHC Darya Khan Mari","W.Status":"(12/7)","Transitioned":"1","Date and time of visit":"2026-10-21 09:10:00","Rubber condoms":"✖","POP / COC pills":"✖","ECP":"✖","Injection - Depo / Sayana Press":"✖","IUCD":"✖","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Naushero Feroz","Facility Code":"242015","Region":"SBA","District.1":"Naushero Feroze - B","Facility Name":"RHC Halani","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-14 11:07:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Shaheed Benazirabad","Facility Code":"243018","Region":"SBA","District.1":"Shaheed Benazirabad - B","Facility Name":"RHC Mehrabpur","W.Status":"(24/7)","Transitioned":"1","Date and time of visit":"2026-10-26 10:40:00","Rubber condoms":"✖","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✖"},
+      {"District":"Shaheed Benazirabad","Facility Code":"243034","Region":"SBA","District.1":"Shaheed Benazirabad - A","Facility Name":"RHC Chak No:3","W.Status":"(24/7)","Transitioned":"1","Date and time of visit":"2026-10-21 13:08:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Sanghar","Facility Code":"252071","Region":"SBA","District.1":"Sanghar - B","Facility Name":"BHU Khairo Kaloi","W.Status":"(6/6)","Transitioned":"-","Date and time of visit":"2026-10-10 09:59:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Sanghar","Facility Code":"252025","Region":"SBA","District.1":"Sanghar - A","Facility Name":"RHC Jhol","W.Status":"(24/7)","Transitioned":"1","Date and time of visit":"2026-10-28 11:05:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Khairpur","Facility Code":"241090","Region":"Sukkur","District.1":"Khairpur - B","Facility Name":"BHU Belharo","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-15 12:16:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✖","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Khairpur","Facility Code":"241012","Region":"Sukkur","District.1":"Khairpur - B","Facility Name":"BHU Lakha Wada","W.Status":"(6/6)","Transitioned":"-","Date and time of visit":"2026-10-15 10:29:00","Rubber condoms":"✔","POP / COC pills":"✖","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✖"},
+      {"District":"Khairpur","Facility Code":"241009","Region":"Sukkur","District.1":"Khairpur - B","Facility Name":"RHC Sobho Dero","W.Status":"(24/7)","Transitioned":"1","Date and time of visit":"2026-10-29 10:43:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Sukkur","Facility Code":"244038","Region":"Sukkur","District.1":"Sukkur","Facility Name":"BHU Kandowahan","W.Status":"(6/6)","Transitioned":"-","Date and time of visit":"2026-10-30 10:25:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✖","Implants":"✔","Contraceptive availability, %":"✖"},
+      {"District":"Sukkur","Facility Code":"244108","Region":"Sukkur","District.1":"Sukkur","Facility Name":"UHU Azizabad","W.Status":"(24/7)","Transitioned":"1","Date and time of visit":"2026-10-26 11:01:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✖","Implants":"✔","Contraceptive availability, %":"✖"},
+      {"District":"Sukkur","Facility Code":"244126","Region":"Sukkur","District.1":"Sukkur","Facility Name":"Maternity Home Rohri","W.Status":"(24/7)","Transitioned":"1","Date and time of visit":"2026-10-15 13:22:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Ghotki","Facility Code":"245009","Region":"Sukkur","District.1":"Ghotki","Facility Name":"BHU Saleh Mahar","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-10 09:15:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Hyderabad","Facility Code":"213093","Region":"Hyderabad","District.1":"Hyderabad","Facility Name":"GD Revenue Society Sheedi Goth","W.Status":"(6/6)","Transitioned":"1","Date and time of visit":"2026-10-05 10:31:00","Rubber condoms":"✖","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"-","IUCD":"-","Implants":"-","Contraceptive availability, %":"✖"},
+      {"District":"Hyderabad","Facility Code":"213006","Region":"Hyderabad","District.1":"Hyderabad","Facility Name":"MCH Centre Hazrat Fatima-tuz-Zahra Latifabad NO: 10","W.Status":"(24/7)","Transitioned":"1","Date and time of visit":"2026-10-12 12:01:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Jamshoro","Facility Code":"215014","Region":"Hyderabad","District.1":"Jamshoro - B","Facility Name":"RHC Bhan","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-27 09:58:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Matiari","Facility Code":"218065","Region":"Hyderabad","District.1":"Matiari","Facility Name":"RHC Khyber","W.Status":"(6/6)","Transitioned":"1","Date and time of visit":"2026-10-27 08:16:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Tando Allahyar","Facility Code":"216014","Region":"Hyderabad","District.1":"Tando Allahyar","Facility Name":"GD Ghulam Hussain Lund","W.Status":"(6/6)","Transitioned":"-","Date and time of visit":"2026-10-05 11:40:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✖","Injection - Depo / Sayana Press":"-","IUCD":"-","Implants":"-","Contraceptive availability, %":"✖"},
+      {"District":"Karachi Malir","Facility Code":"226030","Region":"Karachi","District.1":"Malir","Facility Name":"MCH Kathore","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-05 12:10:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✖","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Karachi Malir","Facility Code":"226418","Region":"Karachi","District.1":"Malir","Facility Name":"MCH New Challi","W.Status":"(6/6)","Transitioned":"1","Date and time of visit":"2026-10-26 10:58:00","Rubber condoms":"✖","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✖"},
+      {"District":"Karachi East","Facility Code":"222014","Region":"Karachi","District.1":"Karachi 2 A","Facility Name":"MCH Lassi Goth","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-06 13:02:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✖","Contraceptive availability, %":"✖"},
+      {"District":"Karachi Kemari","Facility Code":"221101","Region":"Karachi","District.1":"Karachi 2 B","Facility Name":"RHC- Keamari","W.Status":"(24/7)","Transitioned":"1","Date and time of visit":"2026-10-31 09:21:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Karachi West","Facility Code":"221233","Region":"Karachi","District.1":"Karachi 2 A","Facility Name":"BHU Baloch Goth","W.Status":"(6/6)","Transitioned":"1","Date and time of visit":"2026-10-19 13:13:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✔","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✔"},
+      {"District":"Sujawal","Facility Code":"214018","Region":"Karachi","District.1":"Sujawal","Facility Name":"BHU Plus Bannu","W.Status":"(24/7)","Transitioned":"-","Date and time of visit":"2026-10-05 12:53:00","Rubber condoms":"✔","POP / COC pills":"✔","ECP":"✖","Injection - Depo / Sayana Press":"✔","IUCD":"✔","Implants":"✔","Contraceptive availability, %":"✖"}
+    ];
+
+    // Internal state: attach unique _id to every row and maintain cell-level audit map
+    let rawData = INITIAL_DATA.map((r, idx) => ({ ...r, _id: idx, _orig: { ...r } }));
+    let filteredData = [...rawData];
+
+    // Cell-level contestations keyed by `${row._id}::${colName}`
+    // Value: { stage: 'CONTESTED' | 'VERIFIED', reason, reference, remarks, submittedAt, verifiedAt }
+    let cellAudits = {};
+
+    let currentPage = 1;
+    const pageSize = 25;
+
+    let regionChartInstance = null;
+    let commodityChartInstance = null;
+    let scheduleChartInstance = null;
+
+    // Non-blocking toast notification helper
+    let toastTimer = null;
+    function showToast(message, icon = "✅") {
+      const el = document.getElementById("toastNotification");
+      document.getElementById("toastMessage").textContent = message;
+      document.getElementById("toastIcon").textContent = icon;
+      el.classList.remove("hidden");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.add("hidden"), 4000);
+    }
+
+    function getAuditKey(rowId, colName) {
+      return `${rowId}::${colName}`;
+    }
+
+    // Recalculate a facility's overall 'Contraceptive availability, %' based on its 6 commodities
+    function recalculateRowAvailability(row) {
+      const applicableStatuses = COMMODITY_COLS
+        .map(col => row[col])
+        .filter(val => val !== "-");
+
+      const hasStockout = applicableStatuses.includes("✖");
+      const hasPendingContested = applicableStatuses.includes("Contested");
+
+      if (!hasStockout && !hasPendingContested) {
+        row["Contraceptive availability, %"] = "✔";
+      } else if (hasPendingContested && !hasStockout) {
+        row["Contraceptive availability, %"] = "Contested";
+      } else {
+        row["Contraceptive availability, %"] = "✖";
+      }
+    }
+
+    // Populate Region & District dropdowns
+    function populateFilters() {
+      const regSel = document.getElementById("filterRegion");
+      const distSel = document.getElementById("filterDistrict");
+      const currentReg = regSel.value;
+      const currentDist = distSel.value;
+
+      const regions = [...new Set(rawData.map(r => r.Region))].sort();
+      regSel.innerHTML = `<option value="ALL">All Regions (${regions.length})</option>` +
+        regions.map(r => `<option value="${r}">${r}</option>`).join("");
+      if (regions.includes(currentReg)) regSel.value = currentReg;
+
+      const distSource = regSel.value === "ALL" ? rawData : rawData.filter(r => r.Region === regSel.value);
+      const districts = [...new Set(distSource.map(r => r.District))].sort();
+      distSel.innerHTML = `<option value="ALL">All Districts (${districts.length})</option>` +
+        districts.map(d => `<option value="${d}">${d}</option>`).join("");
+      if (districts.includes(currentDist)) distSel.value = currentDist;
+    }
+
+    function rowHasAuditStage(row, stage) {
+      return STATUS_COLS.some(col => {
+        const a = cellAudits[getAuditKey(row._id, col)];
+        return a && a.stage === stage;
+      });
+    }
+
+    function applyFilters() {
+      const reg = document.getElementById("filterRegion").value;
+      const dist = document.getElementById("filterDistrict").value;
+      const ws = document.getElementById("filterWStatus").value;
+      const tr = document.getElementById("filterTransitioned").value;
+      const av = document.getElementById("filterAvail").value;
+      const q = document.getElementById("searchInput").value.trim().toLowerCase();
+
+      filteredData = rawData.filter(row => {
+        if (reg !== "ALL" && row.Region !== reg) return false;
+        if (dist !== "ALL" && row.District !== dist) return false;
+        if (ws !== "ALL" && row["W.Status"] !== ws) return false;
+        if (tr !== "ALL" && String(row.Transitioned) !== tr) return false;
+
+        if (av === "✔" && row["Contraceptive availability, %"] !== "✔") return false;
+        if (av === "✖" && !STATUS_COLS.some(c => row[c] === "✖")) return false;
+        if (av === "CONTESTED" && !rowHasAuditStage(row, "CONTESTED")) return false;
+        if (av === "VERIFIED" && !rowHasAuditStage(row, "VERIFIED")) return false;
+
+        if (q) {
+          const hay = `${row["Facility Name"]} ${row["Facility Code"]} ${row.District} ${row["District.1"]}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+
+      currentPage = 1;
+      updateKPIs();
+      updateCharts();
+      renderTable();
+    }
+
+    function updateKPIs() {
+      const total = filteredData.length;
+      const avail = filteredData.filter(r => r["Contraceptive availability, %"] === "✔").length;
+      const stockout = filteredData.filter(r => STATUS_COLS.some(c => r[c] === "✖")).length;
+
+      const allAudits = Object.values(cellAudits);
+      const pendingContestedCount = allAudits.filter(a => a.stage === "CONTESTED").length;
+      const verifiedCount = allAudits.filter(a => a.stage === "VERIFIED").length;
+
+      document.getElementById("kpiTotal").textContent = total.toLocaleString();
+      document.getElementById("kpiAvailRate").textContent = total ? `${((avail / total) * 100).toFixed(1)}%` : "0%";
+      document.getElementById("kpiAvailCount").textContent = `${avail.toLocaleString()} of ${total.toLocaleString()} compliant`;
+      document.getElementById("kpiStockoutCount").textContent = stockout.toLocaleString();
+      document.getElementById("kpiStockoutRate").textContent = total ? `${((stockout / total) * 100).toFixed(1)}% with ≥1 ✖ stockout` : "0%";
+      document.getElementById("kpiContested").textContent = pendingContestedCount.toLocaleString();
+      document.getElementById("kpiVerified").textContent = verifiedCount.toLocaleString();
+
+      document.getElementById("bannerPendingCount").textContent = pendingContestedCount.toLocaleString();
+      document.getElementById("auditCountBadge").textContent = allAudits.length.toLocaleString();
+    }
+
+    function updateCharts() {
+      // 1. Regional Availability %
+      const regMap = {};
+      filteredData.forEach(r => {
+        if (!regMap[r.Region]) regMap[r.Region] = { total: 0, ok: 0 };
+        regMap[r.Region].total++;
+        if (r["Contraceptive availability, %"] === "✔") regMap[r.Region].ok++;
+      });
+      const regLabels = Object.keys(regMap).sort();
+      const regRates = regLabels.map(k => +((regMap[k].ok / regMap[k].total) * 100).toFixed(1));
+
+      if (regionChartInstance) regionChartInstance.destroy();
+      regionChartInstance = new Chart(document.getElementById("regionChart"), {
+        type: "bar",
+        data: {
+          labels: regLabels,
+          datasets: [{
+            label: "Availability %",
+            data: regRates,
+            backgroundColor: regRates.map(v => v >= 85 ? "#10b981" : v >= 70 ? "#f59e0b" : "#ef4444"),
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + "%" } } }
+        }
+      });
+
+      // 2. Commodity Breakdown (✔, Contested, ✖, -)
+      const shortLabels = ["Condoms", "Pills", "ECP", "Injection", "IUCD", "Implants"];
+      const okCounts = COMMODITY_COLS.map(c => filteredData.filter(r => r[c] === "✔").length);
+      const contestedCounts = COMMODITY_COLS.map(c => filteredData.filter(r => r[c] === "Contested").length);
+      const noCounts = COMMODITY_COLS.map(c => filteredData.filter(r => r[c] === "✖").length);
+      const naCounts = COMMODITY_COLS.map(c => filteredData.filter(r => r[c] === "-").length);
+
+      if (commodityChartInstance) commodityChartInstance.destroy();
+      commodityChartInstance = new Chart(document.getElementById("commodityChart"), {
+        type: "bar",
+        data: {
+          labels: shortLabels,
+          datasets: [
+            { label: "Available / Verified (✔)", data: okCounts, backgroundColor: "#10b981" },
+            { label: "Contested", data: contestedCounts, backgroundColor: "#f59e0b" },
+            { label: "Stockout (✖)", data: noCounts, backgroundColor: "#ef4444" },
+            { label: "N/A (-)", data: naCounts, backgroundColor: "#cbd5e1" }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+          plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10 } } } }
+        }
+      });
+
+      // 3. W.Status & Transitioned Breakdown
+      const groups = [
+        { label: "(6/6) Non-Trans", fn: r => r["W.Status"] === "(6/6)" && String(r.Transitioned) !== "1" },
+        { label: "(6/6) Trans (1)", fn: r => r["W.Status"] === "(6/6)" && String(r.Transitioned) === "1" },
+        { label: "(24/7) Non-Trans", fn: r => r["W.Status"] === "(24/7)" && String(r.Transitioned) !== "1" },
+        { label: "(24/7) Trans (1)", fn: r => r["W.Status"] === "(24/7)" && String(r.Transitioned) === "1" }
+      ];
+      const gOk = groups.map(g => filteredData.filter(r => g.fn(r) && r["Contraceptive availability, %"] === "✔").length);
+      const gNo = groups.map(g => filteredData.filter(r => g.fn(r) && r["Contraceptive availability, %"] !== "✔").length);
+
+      if (scheduleChartInstance) scheduleChartInstance.destroy();
+      scheduleChartInstance = new Chart(document.getElementById("scheduleChart"), {
+        type: "bar",
+        data: {
+          labels: groups.map(g => g.label),
+          datasets: [
+            { label: "Compliant (✔)", data: gOk, backgroundColor: "#3b82f6" },
+            { label: "Non-Compliant / Contested", data: gNo, backgroundColor: "#f97316" }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+          plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10 } } } }
+        }
+      });
+    }
+
+    // Render interactive cell badge depending on stage: ✖ -> Contested -> ✔ (Verified)
+    function renderInteractiveCell(row, colName) {
+      const val = row[colName];
+      const audit = cellAudits[getAuditKey(row._id, colName)];
+      const safeCol = colName.replace(/'/g, "\\'");
+
+      if (audit && audit.stage === "CONTESTED") {
+        return `<button type="button" onclick="openCellModal(${row._id}, '${safeCol}')" class="badge-contested" title="Contested: ${audit.reason}. Click to verify in compliance or edit.">⚑ Contested</button>`;
+      }
+
+      if (audit && audit.stage === "VERIFIED") {
+        return `<button type="button" onclick="openCellModal(${row._id}, '${safeCol}')" class="badge-verified" title="Verified in compliance via contestation. Click to inspect audit log.">✔ <span class="text-[9px] uppercase tracking-tighter">Verified</span></button>`;
+      }
+
+      if (val === "✖") {
+        return `<button type="button" onclick="openCellModal(${row._id}, '${safeCol}')" class="badge-no" title="Click ✖ to contest this item">✖</button>`;
+      }
+
+      if (val === "✔") {
+        return `<span class="badge-ok">✔</span>`;
+      }
+
+      return `<span class="badge-na">-</span>`;
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("recordsTableBody");
+      const total = filteredData.length;
+      const start = (currentPage - 1) * pageSize;
+      const end = Math.min(start + pageSize, total);
+      const slice = filteredData.slice(start, end);
+
+      document.getElementById("tablePageInfo").textContent = total
+        ? `Showing ${start + 1}–${end} of ${total.toLocaleString()}`
+        : "Showing 0–0 of 0";
+      document.getElementById("prevPageBtn").disabled = currentPage <= 1;
+      document.getElementById("nextPageBtn").disabled = end >= total;
+
+      if (!slice.length) {
+        tbody.innerHTML = `<tr><td colspan="15" class="py-10 text-center text-slate-500">No facility records match your current filter selection.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = slice.map(row => {
+        const hasPending = rowHasAuditStage(row, "CONTESTED");
+        const hasVerified = rowHasAuditStage(row, "VERIFIED");
+        const rowHighlight = hasPending
+          ? "bg-amber-50/50 hover:bg-amber-100/50"
+          : hasVerified
+          ? "bg-emerald-50/30 hover:bg-emerald-100/40"
+          : "hover:bg-slate-50";
+
+        return `
+          <tr class="${rowHighlight} transition">
+            <td class="py-2.5 px-3 font-medium text-slate-800">${row["District"]}</td>
+            <td class="py-2.5 px-3 font-mono text-slate-600">${row["Facility Code"]}</td>
+            <td class="py-2.5 px-3 text-slate-700">${row["Region"]}</td>
+            <td class="py-2.5 px-3 text-slate-600">${row["District.1"]}</td>
+            <td class="py-2.5 px-3 font-semibold text-slate-900">${row["Facility Name"]}</td>
+            <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded-lg bg-slate-100 font-mono text-[11px] text-slate-700">${row["W.Status"]}</span></td>
+            <td class="py-2.5 px-3 text-center font-semibold text-slate-700">${row["Transitioned"]}</td>
+            <td class="py-2.5 px-3 font-mono text-[11px] text-slate-600">${row["Date and time of visit"]}</td>
+            <td class="py-2.5 px-3 text-center">${renderInteractiveCell(row, "Rubber condoms")}</td>
+            <td class="py-2.5 px-3 text-center">${renderInteractiveCell(row, "POP / COC pills")}</td>
+            <td class="py-2.5 px-3 text-center">${renderInteractiveCell(row, "ECP")}</td>
+            <td class="py-2.5 px-3 text-center">${renderInteractiveCell(row, "Injection - Depo / Sayana Press")}</td>
+            <td class="py-2.5 px-3 text-center">${renderInteractiveCell(row, "IUCD")}</td>
+            <td class="py-2.5 px-3 text-center">${renderInteractiveCell(row, "Implants")}</td>
+            <td class="py-2.5 px-3 text-center bg-slate-50/70">${renderInteractiveCell(row, "Contraceptive availability, %")}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    // Open Cell-Level Contestation & Verification Modal
+    window.openCellModal = function(rowId, colName) {
+      const row = rawData.find(r => r._id === rowId);
+      if (!row) return;
+
+      const audit = cellAudits[getAuditKey(rowId, colName)];
+      document.getElementById("contestRowIdx").value = rowId;
+      document.getElementById("contestColName").value = colName;
+
+      document.getElementById("modalFacilitySubtitle").textContent = `${row["Facility Name"]} (Code: ${row["Facility Code"]})`;
+      document.getElementById("modalRegDist").textContent = `${row["Region"]} / ${row["District"]} (${row["District.1"]})`;
+      document.getElementById("modalSchedTrans").textContent = `${row["W.Status"]} | Transitioned: ${row["Transitioned"]}`;
+      document.getElementById("modalTimestamp").textContent = row["Date and time of visit"];
+      document.getElementById("modalSelectedColumnBadge").textContent = colName;
+
+      const stagePill = document.getElementById("modalStagePill");
+      const modalTitle = document.getElementById("modalTitle");
+      const currentCellStatus = document.getElementById("modalCurrentCellStatus");
+      const footer = document.getElementById("modalFooterActions");
+
+      if (!audit) {
+        // STAGE 1: Initial ✖ -> Submit Contestation
+        stagePill.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-400/40";
+        stagePill.textContent = "Stage 1: Contest Stockout (✖)";
+        modalTitle.textContent = `Contest "${colName}" Entry`;
+        currentCellStatus.innerHTML = `<span class="badge-no">✖ Stockout</span>`;
+
+        document.getElementById("contestReason").value = "Stock Available in Store / Bin Card Verified";
+        document.getElementById("contestReference").value = "";
+        document.getElementById("contestRemarks").value = "";
+
+        footer.innerHTML = `
+          <button type="button" onclick="closeContestModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium transition">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm transition">
+            ⚑ Submit Contestation
+          </button>
+        `;
+      } else if (audit.stage === "CONTESTED") {
+        // STAGE 2: Contested -> Verify in Compliance (Mark as ✔) OR Update OR Revert
+        stagePill.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-400/40";
+        stagePill.textContent = "Stage 2: Contested — Awaiting Compliance Verification";
+        modalTitle.textContent = `Review & Verify Contestation: "${colName}"`;
+        currentCellStatus.innerHTML = `<span class="badge-contested">⚑ Contested</span>`;
+
+        document.getElementById("contestReason").value = audit.reason;
+        document.getElementById("contestReference").value = audit.reference;
+        document.getElementById("contestRemarks").value = audit.remarks;
+
+        footer.innerHTML = `
+          <button type="button" onclick="revertCellToStockout()" class="px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 font-semibold transition">
+            Reject &amp; Revert to ✖
+          </button>
+          <div class="flex flex-wrap items-center gap-2 ml-auto">
+            <button type="submit" class="px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold transition">
+              Update Remarks
+            </button>
+            <button type="button" onclick="verifyCellInCompliance()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm transition flex items-center gap-1.5">
+              <span>✔ Verify in Compliance (Mark as ✔)</span>
+            </button>
+          </div>
+        `;
+      } else if (audit.stage === "VERIFIED") {
+        // STAGE 3: Verified in Compliance (✔)
+        stagePill.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/40";
+        stagePill.textContent = "Stage 3: Verified in Compliance (✔)";
+        modalTitle.textContent = `Compliance Verified Audit Log: "${colName}"`;
+        currentCellStatus.innerHTML = `<span class="badge-verified">✔ Verified</span>`;
+
+        document.getElementById("contestReason").value = audit.reason;
+        document.getElementById("contestReference").value = audit.reference;
+        document.getElementById("contestRemarks").value = audit.remarks;
+
+        footer.innerHTML = `
+          <button type="button" onclick="revertCellToStockout()" class="px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 font-semibold transition">
+            Revoke &amp; Revert to ✖
+          </button>
+          <button type="button" onclick="closeContestModal()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold transition ml-auto">
+            Close
+          </button>
+        `;
+      }
+
+      const modal = document.getElementById("contestModal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    };
+
+    window.closeContestModal = function() {
+      const modal = document.getElementById("contestModal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    };
+
+    document.getElementById("closeModalBtn").onclick = closeContestModal;
+
+    // Submit Stage 1 -> Stage 2 (Mark cell as Contested)
+    document.getElementById("contestForm").onsubmit = function(e) {
+      e.preventDefault();
+      const rowId = Number(document.getElementById("contestRowIdx").value);
+      const colName = document.getElementById("contestColName").value;
+      const row = rawData.find(r => r._id === rowId);
+      if (!row) return;
+
+      const reason = document.getElementById("contestReason").value;
+      const reference = document.getElementById("contestReference").value.trim();
+      const remarks = document.getElementById("contestRemarks").value.trim();
+
+      if (colName === "Contraceptive availability, %") {
+        // Contest all ✖ commodities in this facility at once
+        COMMODITY_COLS.forEach(c => {
+          if (row[c] === "✖" || row[c] === "Contested") {
+            row[c] = "Contested";
+            cellAudits[getAuditKey(rowId, c)] = {
+              stage: "CONTESTED",
+              reason,
+              reference,
+              remarks,
+              submittedAt: new Date().toISOString()
+            };
+          }
+        });
+      } else {
+        row[colName] = "Contested";
+        cellAudits[getAuditKey(rowId, colName)] = {
+          stage: "CONTESTED",
+          reason,
+          reference,
+          remarks,
+          submittedAt: new Date().toISOString()
+        };
+      }
+
+      recalculateRowAvailability(row);
+      closeContestModal();
+      applyFilters();
+      showToast(`Contestation submitted for ${row["Facility Name"]} (${colName}). Status is now ⚑ Contested.`, "⚑");
+    };
+
+    // Stage 2 -> Stage 3: Verify in Compliance (Mark as ✔)
+    window.verifyCellInCompliance = function() {
+      const rowId = Number(document.getElementById("contestRowIdx").value);
+      const colName = document.getElementById("contestColName").value;
+      const row = rawData.find(r => r._id === rowId);
+      if (!row) return;
+
+      const reason = document.getElementById("contestReason").value;
+      const reference = document.getElementById("contestReference").value.trim();
+      const remarks = document.getElementById("contestRemarks").value.trim();
+
+      if (colName === "Contraceptive availability, %") {
+        COMMODITY_COLS.forEach(c => {
+          if (row[c] === "Contested" || row[c] === "✖") {
+            row[c] = "✔";
+            const prev = cellAudits[getAuditKey(rowId, c)] || {};
+            cellAudits[getAuditKey(rowId, c)] = {
+              ...prev,
+              stage: "VERIFIED",
+              reason,
+              reference,
+              remarks,
+              verifiedAt: new Date().toISOString()
+            };
+          }
+        });
+      } else {
+        row[colName] = "✔";
+        const prev = cellAudits[getAuditKey(rowId, colName)] || {};
+        cellAudits[getAuditKey(rowId, colName)] = {
+          ...prev,
+          stage: "VERIFIED",
+          reason,
+          reference,
+          remarks,
+          verifiedAt: new Date().toISOString()
+        };
+      }
+
+      recalculateRowAvailability(row);
+      closeContestModal();
+      applyFilters();
+      showToast(`Verified in compliance! ${row["Facility Name"]} (${colName}) is now marked as ✔.`, "✅");
+    };
+
+    // Reject or Revoke Contestation -> Revert cell back to original ✖
+    window.revertCellToStockout = function() {
+      const rowId = Number(document.getElementById("contestRowIdx").value);
+      const colName = document.getElementById("contestColName").value;
+      const row = rawData.find(r => r._id === rowId);
+      if (!row) return;
+
+      if (colName === "Contraceptive availability, %") {
+        COMMODITY_COLS.forEach(c => {
+          if (cellAudits[getAuditKey(rowId, c)]) {
+            row[c] = row._orig[c];
+            delete cellAudits[getAuditKey(rowId, c)];
+          }
+        });
+      } else {
+        row[colName] = row._orig[colName];
+        delete cellAudits[getAuditKey(rowId, colName)];
+      }
+
+      recalculateRowAvailability(row);
+      closeContestModal();
+      applyFilters();
+      showToast(`Contestation reverted for ${row["Facility Name"]} (${colName}). Restored to ✖.`, "↩️");
+    };
+
+    // File Upload Handler (loads full 1,339-row Excel/CSV preserving all 15 columns)
+    document.getElementById("fileInput").addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const wb = XLSX.read(evt.target.result, { type: "binary" });
+          const sheetName = wb.SheetNames.includes("FP") ? "FP" : wb.SheetNames[0];
+          const parsed = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "-", raw: false });
+          if (parsed.length) {
+            cellAudits = {};
+            rawData = parsed.map((r, idx) => {
+              const clean = {};
+              ALL_COLUMNS.forEach(col => {
+                clean[col] = r[col] !== undefined && r[col] !== null && String(r[col]).trim() !== ""
+                  ? String(r[col]).trim()
+                  : "-";
+              });
+              return { ...clean, _id: idx, _orig: { ...clean } };
+            });
+            document.getElementById("loadedCountLabel").innerHTML =
+              `Loaded <strong>${rawData.length.toLocaleString()} facilities</strong> from <code>${file.name}</code> (Sheet: <strong>${sheetName}</strong>)`;
+            populateFilters();
+            applyFilters();
+            showToast(`Successfully loaded ${rawData.length.toLocaleString()} records from ${file.name}!`, "📂");
+          }
+        } catch (err) {
+          showToast("Could not parse the uploaded file. Please upload a valid .xlsx or .csv file.", "⚠️");
+        }
+      };
+      reader.readAsBinaryString(file);
+    });
+
+    // CSV Export Helper
+    function downloadCSV(rows, filename) {
+      if (!rows.length) {
+        showToast("No records available to export for the current selection.", "⚠️");
+        return;
+      }
+      const headers = Object.keys(rows[0]);
+      const csv = [
+        headers.join(","),
+        ...rows.map(r => headers.map(h => `"${String(r[h] ?? "").replace(/"/g, '""')}"`).join(","))
+      ].join("\n");
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("exportFilteredBtn").onclick = () => {
+      const exportRows = filteredData.map(r => {
+        const cleanRow = {};
+        ALL_COLUMNS.forEach(col => { cleanRow[col] = r[col]; });
+        const facilityAudits = STATUS_COLS
+          .map(col => ({ col, audit: cellAudits[getAuditKey(r._id, col)] }))
+          .filter(x => x.audit);
+
+        cleanRow["Contestation / Verification Summary"] = facilityAudits.length
+          ? facilityAudits.map(x => `${x.col}: ${x.audit.stage} (${x.audit.reason})`).join(" | ")
+          : "No Contestations";
+        return cleanRow;
+      });
+      downloadCSV(exportRows, "FP_Dashboard_Filtered_15Cols.csv");
+    };
+
+    document.getElementById("exportAuditBtn").onclick = () => {
+      const auditEntries = Object.entries(cellAudits).map(([key, audit]) => {
+        const [rowIdStr, colName] = key.split("::");
+        const r = rawData.find(item => item._id === Number(rowIdStr));
+        return {
+          "Facility Code": r ? r["Facility Code"] : "",
+          "Facility Name": r ? r["Facility Name"] : "",
+          "Region": r ? r["Region"] : "",
+          "District": r ? r["District"] : "",
+          "District.1": r ? r["District.1"] : "",
+          "W.Status": r ? r["W.Status"] : "",
+          "Transitioned": r ? r["Transitioned"] : "",
+          "Date and time of visit": r ? r["Date and time of visit"] : "",
+          "Disputed Column": colName,
+          "Original Status": r ? r._orig[colName] : "✖",
+          "Current Audit Stage": audit.stage === "VERIFIED" ? "✔ VERIFIED IN COMPLIANCE" : "⚑ CONTESTED (PENDING)",
+          "Contestation Reason": audit.reason,
+          "Stock Reference": audit.reference,
+          "Auditor Remarks": audit.remarks,
+          "Submitted At": audit.submittedAt || "",
+          "Verified At": audit.verifiedAt || ""
+        };
+      });
+      downloadCSV(auditEntries, "FP_Contestation_Compliance_Audit_Log.csv");
+    };
+
+    // Quick Filter Buttons
+    document.getElementById("quickFilterStockoutsBtn").onclick = () => {
+      document.getElementById("filterAvail").value = "✖";
+      applyFilters();
+    };
+    document.getElementById("quickFilterContestedBtn").onclick = () => {
+      document.getElementById("filterAvail").value = "CONTESTED";
+      applyFilters();
+    };
+
+    // Standard Filter Listeners
+    document.getElementById("filterRegion").addEventListener("change", () => { populateFilters(); applyFilters(); });
+    document.getElementById("filterDistrict").addEventListener("change", applyFilters);
+    document.getElementById("filterWStatus").addEventListener("change", applyFilters);
+    document.getElementById("filterTransitioned").addEventListener("change", applyFilters);
+    document.getElementById("filterAvail").addEventListener("change", applyFilters);
+    document.getElementById("searchInput").addEventListener("input", applyFilters);
+
+    document.getElementById("resetFiltersBtn").addEventListener("click", () => {
+      document.getElementById("filterRegion").value = "ALL";
+      populateFilters();
+      document.getElementById("filterDistrict").value = "ALL";
+      document.getElementById("filterWStatus").value = "ALL";
+      document.getElementById("filterTransitioned").value = "ALL";
+      document.getElementById("filterAvail").value = "ALL";
+      document.getElementById("searchInput").value = "";
+      applyFilters();
+    });
+
+    document.getElementById("prevPageBtn").onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
+    document.getElementById("nextPageBtn").onclick = () => { if (currentPage * pageSize < filteredData.length) { currentPage++; renderTable(); } };
+
+    // Initialize Dashboard
+    populateFilters();
+    applyFilters();
+  </script>
+</body>
+</html>

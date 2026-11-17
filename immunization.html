@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TB Treatment Audit & Contestation Management Dashboard</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+
+    /* Custom sleek scrollbars for matrix table */
+    .matrix-scroll::-webkit-scrollbar {
+      height: 10px;
+      width: 10px;
+    }
+    .matrix-scroll::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 6px;
+    }
+    .matrix-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 6px;
+    }
+    .matrix-scroll::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Sticky left columns in audit matrix */
+    @media (min-width: 768px) {
+      .sticky-col-1 {
+        position: sticky;
+        left: 0;
+        z-index: 20;
+      }
+      .sticky-col-2 {
+        position: sticky;
+        left: 78px;
+        z-index: 20;
+      }
+      .sticky-col-3 {
+        position: sticky;
+        left: 268px;
+        z-index: 20;
+      }
+      thead .sticky-col-1,
+      thead .sticky-col-2,
+      thead .sticky-col-3 {
+        z-index: 30;
+      }
+    }
+
+    /* Subtle pulse animation for newly updated cells */
+    @keyframes popIn {
+      0% { transform: scale(0.92); opacity: 0.6; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .badge-pop {
+      animation: popIn 0.2s ease-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-900">
+
+  <!-- Top Executive Header -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 shadow-sm">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <!-- Brand & Title -->
+        <div class="flex items-start sm:items-center gap-3.5">
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shrink-0">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white">
+                TB Treatment Audit &amp; Contestation Portal
+              </h1>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-200 border border-indigo-400/30">
+                October 2026 Audit Cycle
+              </span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-400 mt-0.5">
+              Sindh Health Facility Monitoring &bull; 140 Audited Facilities &bull; Interactive Non-Compliance Contestation &amp; Verification Workflow
+            </p>
+          </div>
+        </div>
+
+        <!-- Global Controls & Quick Actions -->
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Toggle: Count Verified as Compliant -->
+          <label class="inline-flex items-center gap-2.5 bg-slate-800/90 hover:bg-slate-800 border border-slate-700 px-3 py-2 rounded-xl cursor-pointer select-none transition">
+            <input type="checkbox" id="toggleVerifiedCompliant" checked class="sr-only peer" />
+            <div class="w-9 h-5 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all relative peer-checked:bg-emerald-500"></div>
+            <span class="text-xs font-medium text-slate-200">Count <span class="text-emerald-400 font-semibold">✔ Verified</span> in Live Metrics</span>
+          </label>
+
+          <!-- Demo Populate Button -->
+          <button id="btnDemoPopulate" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30 transition cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+            </svg>
+            Demo: Sample Contestations
+          </button>
+
+          <!-- Reset All Button -->
+          <button id="btnResetAll" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-rose-950/60 hover:text-rose-200 hover:border-rose-800 border border-slate-700 transition cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
+            Reset All
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Top KPI Summary Strip (5 Cards) -->
+    <section aria-label="Key Performance Indicators" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <!-- Card 1: Total Audited Facilities -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Audited Facilities</span>
+          <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3">
+          <div id="kpiTotalFacilities" class="text-2xl sm:text-3xl font-extrabold text-slate-900">140</div>
+          <p id="kpiRegionDistrictSub" class="text-xs text-slate-500 mt-1">Across 6 Regions &bull; 34 Districts</p>
+        </div>
+      </div>
+
+      <!-- Card 2: Facility Functionality Rate -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Facility Functionality</span>
+          <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3">
+          <div class="flex items-baseline gap-2">
+            <span id="kpiFuncRate" class="text-2xl sm:text-3xl font-extrabold text-indigo-600">55.0%</span>
+            <span id="kpiFuncDelta" class="hidden text-xs font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">+0.0%</span>
+          </div>
+          <p id="kpiFuncSub" class="text-xs text-slate-500 mt-1">77 / 140 facilities functional</p>
+        </div>
+      </div>
+
+      <!-- Card 3: Open Contestations (✖) -->
+      <div class="bg-white rounded-2xl border border-rose-200/80 p-4 shadow-sm flex flex-col justify-between relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-rose-700">Open Contestations (✖)</span>
+          <span class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-sm">✖</span>
+        </div>
+        <div class="mt-3">
+          <div id="kpiOpenCount" class="text-2xl sm:text-3xl font-extrabold text-rose-600">298</div>
+          <p id="kpiOpenSub" class="text-xs text-slate-500 mt-1">Across 63 facilities &bull; Click ✖ to contest</p>
+        </div>
+      </div>
+
+      <!-- Card 4: Pending Review (Contested) -->
+      <div class="bg-white rounded-2xl border border-amber-200/80 p-4 shadow-sm flex flex-col justify-between relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-amber-700">Pending Review (Contested)</span>
+          <span class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3">
+          <div id="kpiContestedCount" class="text-2xl sm:text-3xl font-extrabold text-amber-600">0</div>
+          <p id="kpiContestedSub" class="text-xs text-slate-500 mt-1">Awaiting supervisor verification</p>
+        </div>
+      </div>
+
+      <!-- Card 5: Verified Resolutions (✔ Verified) -->
+      <div class="bg-white rounded-2xl border border-emerald-200/80 p-4 shadow-sm flex flex-col justify-between relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-1 h-full bg-emerald-600"></div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Verified Resolutions</span>
+          <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-sm">✔</span>
+        </div>
+        <div class="mt-3">
+          <div id="kpiVerifiedCount" class="text-2xl sm:text-3xl font-extrabold text-emerald-600">0</div>
+          <p id="kpiVerifiedSub" class="text-xs text-slate-500 mt-1">Approved &amp; marked ✔ Verified</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Collapsible Analytics Section -->
+    <section class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+        <div class="flex items-center gap-2.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+          <h2 class="text-sm font-bold text-slate-800">Audit &amp; Contestation Analytics Overview</h2>
+          <span class="hidden sm:inline-block text-xs text-slate-500">(Updates dynamically as cells transition from ✖ &rarr; Contested &rarr; ✔ Verified)</span>
+        </div>
+        <button id="btnToggleCharts" type="button" class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 transition cursor-pointer">
+          <span id="toggleChartsLabel">Hide Charts</span>
+          <svg id="toggleChartsIcon" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+      </div>
+
+      <div id="chartsContainer" class="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Chart 1: Regional Functionality & Contestation Breakdown -->
+        <div class="bg-slate-50/50 rounded-xl border border-slate-200/70 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800">Regional Facility Functionality Breakdown</h3>
+              <p class="text-xs text-slate-500">Functional vs. Non-Functional (Open ✖ / Contested) facilities by Region</p>
+            </div>
+          </div>
+          <div class="relative h-64 w-full">
+            <canvas id="regionalChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Indicator Failure Breakdown -->
+        <div class="bg-slate-50/50 rounded-xl border border-slate-200/70 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800">Indicator Non-Compliance &amp; Resolution Breakdown</h3>
+              <p class="text-xs text-slate-500">Cell counts across all 10 indicators: Open ✖ vs. Contested vs. ✔ Verified</p>
+            </div>
+          </div>
+          <div class="relative h-64 w-full">
+            <canvas id="indicatorChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Interactive Audit Matrix & Filter Section -->
+    <section class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+      <!-- Filter & Search Control Bar -->
+      <div class="p-4 sm:p-5 border-b border-slate-200 space-y-4">
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+          <!-- Search Input -->
+          <div class="relative flex-1 min-w-[240px]">
+            <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Search by Facility Name or Code (e.g., 211054, BHU Dadah)..."
+              class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+            />
+          </div>
+
+          <!-- Cascading Dropdown Filters & Export -->
+          <div class="flex flex-wrap items-center gap-2.5">
+            <!-- Region Filter -->
+            <select id="regionFilter" aria-label="Filter by Region" class="px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+              <option value="ALL">All Regions (6)</option>
+            </select>
+
+            <!-- District Filter -->
+            <select id="districtFilter" aria-label="Filter by District" class="px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+              <option value="ALL">All Districts (34)</option>
+            </select>
+
+            <!-- Contestation Status Filter -->
+            <select id="statusFilter" aria-label="Filter by Contestation Status" class="px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+              <option value="ALL">All Facilities (140)</option>
+              <option value="HAS_OPEN">Has Open ✖ Contestations</option>
+              <option value="HAS_CONTESTED">Has Submitted Contested</option>
+              <option value="HAS_VERIFIED">Has ✔ Verified Cells</option>
+              <option value="COMPLIANT">100% Compliant (No ✖)</option>
+            </select>
+
+            <!-- Export CSV Button -->
+            <button id="btnExportCsv" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 shadow-sm transition cursor-pointer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive Workflow Legend Banner -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-3 border-t border-slate-100">
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
+            <span class="font-bold text-slate-700 uppercase tracking-wider">Cell Workflow:</span>
+
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 font-semibold">
+              <span class="font-bold">✖</span> Step 1: Click failed cell to open Contestation
+            </span>
+            <span class="text-slate-400 font-bold">&rarr;</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-300 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Step 2: Shows <u>Contested</u> (Click to Review &amp; Verify)
+            </span>
+            <span class="text-slate-400 font-bold">&rarr;</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 font-semibold">
+              <span>✔ Verified</span> Step 3: Supervisor Approved
+            </span>
+            <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 text-slate-600 border border-slate-200">
+              <span class="text-emerald-600 font-bold">✔</span> Passed Audit
+            </span>
+          </div>
+
+          <div id="tableMatchCount" class="text-xs font-semibold text-slate-500">
+            Showing 1–25 of 140 facilities
+          </div>
+        </div>
+      </div>
+
+      <!-- Matrix Table Wrapper -->
+      <div class="overflow-x-auto matrix-scroll relative">
+        <table class="w-full text-left border-collapse min-w-[1380px]">
+          <thead>
+            <tr class="bg-slate-900 text-slate-200 text-[11px] uppercase tracking-wider border-b border-slate-800">
+              <th class="py-3.5 px-3 font-bold sticky-col-1 bg-slate-900 w-[78px]">Code</th>
+              <th class="py-3.5 px-3 font-bold sticky-col-2 bg-slate-900 w-[190px]">Facility Name</th>
+              <th class="py-3.5 px-3 font-bold sticky-col-3 bg-slate-900 w-[155px] border-r border-slate-700">Region / District</th>
+              <th class="py-3.5 px-3 font-bold w-[115px]">Visit Date</th>
+              <th class="py-3.5 px-3 font-bold text-center w-[115px] border-r border-slate-700">W.Status</th>
+              <!-- 10 Audit Indicator Headers -->
+              <th class="py-3 px-2 font-semibold text-center w-[95px]" title="Trained doctor present">Trained Doctor</th>
+              <th class="py-3 px-2 font-semibold text-center w-[95px]" title="DOTS Facilitator present">DOTS Facilitator</th>
+              <th class="py-3 px-2 font-semibold text-center w-[95px]" title="Skilled staff present">Skilled Staff</th>
+              <th class="py-3 px-2 font-semibold text-center w-[95px]" title="RH 150mg/ 75mg">RH 150/75</th>
+              <th class="py-3 px-2 font-semibold text-center w-[95px]" title="RH 75mg/ 50mg">RH 75/50</th>
+              <th class="py-3 px-2 font-semibold text-center w-[95px]" title="RHZE 150mg/ 75mg/ 400mg/ 275mg">RHZE Combo</th>
+              <th class="py-3 px-2 font-semibold text-center w-[95px]" title="RHZ 75mg/ 50mg/ 150mg tablets">RHZ Tabs</th>
+              <th class="py-3 px-2 font-semibold text-center w-[95px]" title="Peadietric Medicine availability">Paediatric Meds</th>
+              <th class="py-3 px-2 font-semibold text-center w-[95px]" title="Medicine availability">Medicine Avail.</th>
+              <th class="py-3 px-2 font-semibold text-center w-[105px] bg-slate-800/80" title="Facility Functionality">Facility Func.</th>
+            </tr>
+          </thead>
+          <tbody id="auditTableBody" class="divide-y divide-slate-200 text-xs">
+            <!-- Rows rendered dynamically via JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-2 text-xs text-slate-600">
+          <span>Rows per page:</span>
+          <select id="pageSizeSelect" class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="140">Show All (140)</option>
+          </select>
+        </div>
+
+        <div id="paginationControls" class="flex items-center gap-1.5">
+          <!-- Pagination buttons rendered dynamically -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Interactive Audit & Contestation / Verification Modal -->
+  <div id="workflowModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden">
+      <!-- Modal Header -->
+      <div id="modalHeader" class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-3">
+          <div id="modalStatusIcon" class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg shrink-0"></div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 id="modalTitle" class="text-base sm:text-lg font-bold text-slate-900">Audit Details</h3>
+              <span id="modalBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold"></span>
+            </div>
+            <p id="modalSubtitle" class="text-xs text-slate-500 mt-0.5"></p>
+          </div>
+        </div>
+        <button id="btnCloseModal" type="button" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition cursor-pointer" aria-label="Close modal">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div id="modalBody" class="p-6 overflow-y-auto space-y-5 text-sm">
+        <!-- Dynamically populated -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div id="modalFooter" class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-end gap-2.5">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Non-blocking Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <script>
+    /**
+     * ============================================================================
+     * 1. EXACT 140-FACILITY OCTOBER 2026 TB TREATMENT AUDIT DATASET
+     * ============================================================================
+     */
+    const INDICATORS = [
+      "Trained doctor present",
+      "DOTS Facilitator present",
+      "Skilled staff present",
+      "RH 150mg/ 75mg",
+      "RH 75mg/ 50mg",
+      "RHZE 150mg/ 75mg/ 400mg/ 275mg",
+      "RHZ 75mg/ 50mg/ 150mg tablets",
+      "Peadietric Medicine availability",
+      "Medicine availability",
+      "Facility Functionality"
+    ];
+
+    const INDICATOR_SHORT = [
+      "Trained Doctor",
+      "DOTS Facilitator",
+      "Skilled Staff",
+      "RH 150/75",
+      "RH 75/50",
+      "RHZE Combo",
+      "RHZ Tabs",
+      "Paediatric Meds",
+      "Medicine Avail.",
+      "Facility Func."
+    ];
+
+    const RAW_AUDIT_DATA = [
+      [211054,"Mirpurkhas","Badin - A","BHU Dadah","2026-10-24 08:31",[0,1,0,1,1,1,1,1,1,0]],
+      [211018,"Mirpurkhas","Badin - B","BHU Gulab Laghari","2026-10-17 08:17",[1,1,1,1,1,1,1,1,1,1]],
+      [211056,"Mirpurkhas","Badin - B","BHU Rahuki","2026-10-09 10:22",[1,1,1,1,0,1,1,0,0,0]],
+      [211070,"Mirpurkhas","Badin - A","GD Seerani","2026-10-12 13:20",[1,1,1,1,1,1,1,1,1,1]],
+      [211034,"Mirpurkhas","Badin - B","MC Kario Ghanhwar","2026-10-26 12:28",[1,1,1,1,1,1,1,1,1,1]],
+      [211048,"Mirpurkhas","Badin - B","RHC Rajo Khanani","2026-10-21 09:51",[1,1,1,1,1,1,1,1,1,1]],
+      [211046,"Mirpurkhas","Badin - B","RHC Tando Ghulam Ali","2026-10-08 10:09",[0,1,0,1,1,1,1,1,1,0]],
+      [212045,"Larkana","Dadu","BHU Faridabad","2026-10-07 10:16",[0,0,0,1,0,1,1,0,0,0]],
+      [212009,"Larkana","Dadu","BHU Phulji Station","2026-10-06 14:06",[0,1,0,1,1,0,1,1,0,0]],
+      [212022,"Larkana","Dadu","BHU Wahi Pandhi","2026-10-21 11:55",[1,1,1,1,1,1,1,1,1,1]],
+      [212077,"Larkana","Dadu","Drigh Bala","2026-10-28 14:00",[1,1,1,1,1,1,1,1,1,1]],
+      [212036,"Larkana","Dadu","MCHC Khudabad","2026-10-10 12:05",[1,1,1,1,1,1,1,1,1,1]],
+      [212050,"Larkana","Dadu","Radhan","2026-10-19 11:33",[1,1,1,1,0,1,1,0,0,0]],
+      [245102,"Sukkur","Ghotki","BHU Garhi Chakar","2026-10-28 12:31",[1,1,1,1,1,1,1,1,1,1]],
+      [245018,"Sukkur","Ghotki","BHU Kamoo Shaheed","2026-10-19 12:58",[1,1,1,1,1,1,1,1,1,1]],
+      [245011,"Sukkur","Ghotki","BHU Umar Daho","2026-10-31 12:30",[1,1,1,1,1,1,1,1,1,1]],
+      [245001,"Sukkur","Ghotki","RHC Reti","2026-10-14 12:26",[1,1,1,1,1,1,1,1,1,1]],
+      [213021,"Hyderabad","Hyderabad","BHU Hatri","2026-10-03 12:06",[0,1,0,1,0,1,1,0,0,0]],
+      [213018,"Hyderabad","Hyderabad","BHU Sehrish Nagar","2026-10-05 12:24",[1,1,1,1,0,1,1,0,0,0]],
+      [213006,"Hyderabad","Hyderabad","MCH Centre Hazrat Fatima-tuz-Zahra Latifabad NO: 10","2026-10-12 12:01",[1,0,0,1,0,1,1,0,0,0]],
+      [213054,"Hyderabad","Hyderabad","MCHC Jeando Halepoto","2026-10-29 08:15",[1,1,1,1,1,1,1,1,1,1]],
+      [213034,"Hyderabad","Hyderabad","MCHC Jhando Khoso","2026-10-27 10:06",[1,1,1,1,0,1,1,0,0,0]],
+      [213041,"Hyderabad","Hyderabad","MCHC Seri","2026-10-26 12:46",[0,1,0,1,1,1,1,1,1,0]],
+      [213038,"Hyderabad","Hyderabad","RHC Hoosri","2026-10-13 09:38",[0,1,0,1,1,1,1,1,1,0]],
+      [213029,"Hyderabad","Hyderabad","RHC Tando Jam","2026-10-10 10:28",[1,0,0,1,0,1,1,0,0,0]],
+      [231016,"Larkana","Jacobabad","MCHC Ahmed Mian Soomro","2026-10-30 11:15",[1,1,1,1,1,1,1,1,1,1]],
+      [231025,"Larkana","Jacobabad","MCHC Bachro","2026-10-26 11:02",[1,1,1,1,1,1,1,1,1,1]],
+      [231033,"Larkana","Jacobabad","MCHC Mubarakpur","2026-10-19 10:52",[1,1,1,1,1,1,1,1,1,1]],
+      [231017,"Larkana","Jacobabad","MCHC Sheranpur","2026-10-28 14:06",[1,1,1,1,1,1,0,0,0,0]],
+      [231004,"Larkana","Jacobabad","RHC Garhi Hassan","2026-10-13 10:16",[1,1,1,1,1,1,1,1,1,1]],
+      [215033,"Hyderabad","Jamshoro - A","BHU Khanoth","2026-10-20 09:19",[1,1,1,1,1,1,1,1,1,1]],
+      [215005,"Hyderabad","Jamshoro - A","BHU Khuda Ki Basti","2026-10-12 08:26",[0,1,0,1,0,1,1,0,0,0]],
+      [215012,"Hyderabad","Jamshoro - B","RHC Arazi","2026-10-22 13:36",[1,0,0,1,1,1,1,1,1,0]],
+      [215014,"Hyderabad","Jamshoro - B","RHC Bhan","2026-10-27 09:58",[1,1,1,1,1,1,1,1,1,1]],
+      [215030,"Hyderabad","Jamshoro - A","RHC Uner Pur","2026-10-20 11:28",[1,1,1,0,1,1,1,1,0,0]],
+      [234031,"Larkana","Kamber","BHU Behram","2026-10-29 12:47",[1,1,1,1,1,1,1,1,1,1]],
+      [234049,"Larkana","Kamber","BHU Gaji Khuhawar","2026-10-19 12:42",[1,0,0,1,0,1,1,0,0,0]],
+      [234017,"Larkana","Kamber","BHU Khairpur Juso","2026-10-27 12:18",[1,1,1,1,1,1,1,1,1,1]],
+      [234034,"Larkana","Kamber","BHU Thoof Chousool","2026-10-13 10:52",[1,1,1,1,1,1,1,1,1,1]],
+      [234072,"Larkana","Kamber","RHC Nasirabad","2026-10-10 11:04",[0,0,0,1,1,1,1,1,1,0]],
+      [234070,"Larkana","Kamber","RHC Qubo Saeed Khan","2026-10-10 11:50",[0,1,0,1,0,1,0,0,0,0]],
+      [221113,"Karachi","Karachi 2 B","Mawach Goth","2026-10-29 12:56",[1,0,0,1,1,1,1,1,1,0]],
+      [221101,"Karachi","Karachi 2 B","RHC- Keamari","2026-10-31 09:21",[1,1,1,1,1,1,1,1,1,1]],
+      [221112,"Karachi","Karachi 2 B","RHC- Sher Shah","2026-10-26 13:01",[1,1,1,1,1,1,1,1,1,1]],
+      [226012,"Karachi","Malir","36 Bedded Hospital Rehri Miani","2026-10-07 09:52",[1,1,1,1,0,1,0,0,0,0]],
+      [226411,"Karachi","Malir","36 Bedded Urban Health Center Malir City","2026-10-30 08:54",[1,1,1,1,1,1,1,1,1,1]],
+      [235027,"Larkana","Kashmore","BHU Bijar Khan Bijarani","2026-10-26 11:56",[1,1,1,1,1,1,1,1,1,1]],
+      [235021,"Larkana","Kashmore","BHU Khewali","2026-10-29 10:48",[1,1,1,1,1,1,1,1,1,1]],
+      [235025,"Larkana","Kashmore","BHU Pir Jan Bajkani","2026-10-26 11:04",[1,1,1,1,1,1,1,1,1,1]],
+      [235039,"Larkana","Kashmore","GD Sardaro Khoso","2026-10-12 11:11",[1,1,1,1,1,1,1,1,1,1]],
+      [235004,"Larkana","Kashmore","RHC Karampur","2026-10-24 11:33",[1,1,1,1,1,1,1,1,1,1]],
+      [235003,"Larkana","Kashmore","RHC Tangwani","2026-10-23 08:53",[1,1,1,1,1,1,1,1,1,1]],
+      [241162,"Sukkur","Khairpur - B","BHU Akri","2026-10-27 09:49",[1,1,1,1,1,1,1,1,1,1]],
+      [241124,"Sukkur","Khairpur - A","BHU Babarloi","2026-10-29 12:27",[1,1,1,1,1,1,1,1,1,1]],
+      [241011,"Sukkur","Khairpur - B","BHU Khuhra","2026-10-28 12:48",[1,1,1,1,1,1,1,1,1,1]],
+      [241166,"Sukkur","Khairpur - A","BHU Lal Bux Mangi","2026-10-07 13:19",[1,1,1,1,1,1,1,1,1,1]],
+      [241064,"Sukkur","Khairpur - B","BHU Piryaloi","2026-10-12 10:34",[1,1,1,1,1,1,1,1,1,1]],
+      [241020,"Sukkur","Khairpur - B","BHU Sami","2026-10-20 13:36",[1,1,1,1,1,1,1,1,1,1]],
+      [241044,"Sukkur","Khairpur - A","BHU Setharja","2026-10-31 12:02",[1,1,1,1,1,1,1,1,1,1]],
+      [241077,"Sukkur","Khairpur - B","RHC Faiz Ganj","2026-10-27 12:15",[1,1,1,1,1,1,1,1,1,1]],
+      [241085,"Sukkur","Khairpur - B","RHC Pir Jo Goth","2026-10-26 09:31",[1,1,1,1,1,1,1,1,1,1]],
+      [241009,"Sukkur","Khairpur - B","RHC Sobho Dero","2026-10-29 10:43",[1,1,1,1,1,1,1,1,1,1]],
+      [232021,"Larkana","Larkana - B","BHU Akil","2026-10-07 11:38",[1,1,1,1,1,1,1,1,1,1]],
+      [232023,"Larkana","Larkana - A","BHU Dhamrah","2026-10-31 09:58",[1,1,1,1,0,1,1,0,0,0]],
+      [232805,"Larkana","Larkana - B","GD Tatri","2026-10-01 08:33",[0,1,0,1,0,1,0,0,0,0]],
+      [232055,"Larkana","Larkana - A","M.C.H Murad Wahan","2026-10-19 12:23",[1,1,1,1,1,1,1,1,1,1]],
+      [232204,"Larkana","Larkana - A","RHC Banguldero","2026-10-12 10:58",[1,1,1,1,1,1,1,1,1,1]],
+      [232068,"Larkana","Larkana - A","RHC Ghari Khuda Bux Bhutto","2026-10-15 10:28",[1,1,1,1,1,1,1,1,1,1]],
+      [218105,"Hyderabad","Matiari","BHU Odero lal Village","2026-10-03 10:57",[1,1,1,1,1,1,1,1,1,1]],
+      [218091,"Hyderabad","Matiari","BHU Panj Moro","2026-10-10 08:05",[1,1,1,1,1,1,1,1,1,1]],
+      [218023,"Hyderabad","Matiari","RHC Oderolal Station","2026-10-03 11:48",[0,1,0,1,1,1,1,1,1,0]],
+      [251031,"Mirpurkhas","Mirpurkhas - B","BHU Abdullah Khan Jarwar","2026-10-05 09:54",[1,1,1,1,1,1,0,0,0,0]],
+      [251016,"Mirpurkhas","Mirpurkhas - A","BHU Girhore Sharif","2026-10-05 08:17",[0,0,0,1,1,1,1,1,1,0]],
+      [251042,"Mirpurkhas","Mirpurkhas - A","BHU Makhan Samoon","2026-10-14 11:22",[1,1,1,1,1,1,1,1,1,1]],
+      [251002,"Mirpurkhas","Mirpurkhas - B","RHC Jhudo","2026-10-30 10:46",[1,1,1,1,1,1,1,1,1,1]],
+      [242026,"SBA","Naushero Feroze - B","BHU Behlani","2026-10-22 13:55",[1,1,1,0,0,1,0,0,0,0]],
+      [242058,"SBA","Naushero Feroze - B","BHU Dali","2026-10-12 12:21",[1,1,1,1,1,1,1,1,1,1]],
+      [242041,"SBA","Naushero Feroze -A","BHU Deparja","2026-10-03 13:03",[0,0,0,1,0,1,1,0,0,0]],
+      [242037,"SBA","Naushero Feroze -A","BHU Kundha Khahi","2026-10-07 10:12",[1,1,1,1,1,1,1,1,1,1]],
+      [242019,"SBA","Naushero Feroze - B","BHU Muhbat Dero Jatoi","2026-10-15 08:30",[1,1,1,1,0,1,1,0,0,0]],
+      [242038,"SBA","Naushero Feroze -A","BHU Phull","2026-10-21 11:37",[1,1,1,1,1,1,1,1,1,1]],
+      [242004,"SBA","Naushero Feroze - B","RHC Bhiria City","2026-10-01 10:08",[0,0,0,1,0,1,0,0,0,0]],
+      [242014,"SBA","Naushero Feroze -A","RHC Darya Khan Mari","2026-10-21 09:10",[0,0,0,1,0,1,1,0,0,0]],
+      [242011,"SBA","Naushero Feroze - B","RHC Derbello","2026-10-24 09:16",[1,1,1,1,0,1,0,0,0,0]],
+      [242015,"SBA","Naushero Feroze - B","RHC Halani","2026-10-14 11:07",[1,1,1,1,1,1,1,1,1,1]],
+      [242007,"SBA","Naushero Feroze -A","RHC Mithiani","2026-10-20 08:27",[0,0,0,1,1,1,1,1,1,0]],
+      [242013,"SBA","Naushero Feroze -A","RHC Padidan","2026-10-03 09:58",[0,0,0,1,0,1,0,0,0,0]],
+      [252084,"SBA","Sanghar - A","BHU Hathungo","2026-10-14 10:43",[1,1,1,1,1,1,1,1,1,1]],
+      [252014,"SBA","Sanghar - A","BHU Head Jamraoo","2026-10-20 08:34",[1,1,1,1,1,1,1,1,1,1]],
+      [252023,"SBA","Sanghar - A","BHU Jiabad","2026-10-14 12:43",[1,1,1,1,1,1,1,1,1,1]],
+      [252046,"SBA","Sanghar - B","BHU Jiando Rind","2026-10-19 10:16",[0,1,0,1,0,1,1,0,0,0]],
+      [252036,"SBA","Sanghar - A","BHU Khadro","2026-10-15 10:51",[1,1,1,1,1,1,1,1,1,1]],
+      [252093,"SBA","Sanghar - A","BHU Khahi","2026-10-21 08:54",[0,1,0,1,1,1,0,0,0,0]],
+      [252070,"SBA","Sanghar - B","BHU Landhi","2026-10-31 10:26",[1,1,1,1,1,1,1,1,1,1]],
+      [252063,"SBA","Sanghar - B","BHU Malook Junejo","2026-10-28 12:04",[1,1,1,1,1,1,1,1,1,1]],
+      [252035,"SBA","Sanghar - A","BHU Rukan Burirra","2026-10-24 10:16",[1,1,1,1,1,1,1,1,1,1]],
+      [252018,"SBA","Sanghar - A","BHU Tando Mitha Khan","2026-10-12 08:34",[1,1,1,1,1,1,0,0,0,0]],
+      [252020,"SBA","Sanghar - A","RHC Jaffar Khan Laghari","2026-10-17 10:04",[1,1,1,1,1,1,0,0,0,0]],
+      [252095,"SBA","Sanghar - B","RHC Jam Nawaz Ali","2026-10-14 11:26",[0,1,0,1,1,1,1,1,1,0]],
+      [252025,"SBA","Sanghar - A","RHC Jhol","2026-10-28 11:05",[0,1,0,1,1,1,1,1,1,0]],
+      [252007,"SBA","Sanghar - A","RHC Kandiari","2026-10-09 10:21",[1,1,1,1,1,1,1,1,1,1]],
+      [243009,"SBA","Shaheed Benazirabad - A","BHU Bucheeri","2026-10-30 09:08",[1,1,1,1,1,1,1,1,1,1]],
+      [243044,"SBA","Shaheed Benazirabad - B","BHU Nawab Wali Mohd","2026-10-15 12:35",[0,1,0,1,1,1,1,1,1,0]],
+      [243071,"SBA","Shaheed Benazirabad - B","BHU Punhal Khan Chandio","2026-10-14 10:14",[1,0,0,0,1,1,1,1,0,0]],
+      [243035,"SBA","Shaheed Benazirabad - A","RHC Daur","2026-10-16 12:12",[1,1,1,1,1,1,1,1,1,1]],
+      [243036,"SBA","Shaheed Benazirabad - B","RHC Mehar Ali Jamali","2026-10-19 12:20",[0,1,0,1,0,1,1,0,0,0]],
+      [243018,"SBA","Shaheed Benazirabad - B","RHC Mehrabpur","2026-10-26 10:40",[0,1,0,1,0,1,1,0,0,0]],
+      [233026,"Sukkur","Shikarpur","BHU Jamra","2026-10-08 12:49",[1,1,1,1,0,1,1,0,0,0]],
+      [233022,"Sukkur","Shikarpur","RHC Mian Jo Goth","2026-10-20 12:30",[1,1,1,1,1,1,1,1,1,1]],
+      [233056,"Sukkur","Shikarpur","RHC Sultan Kot","2026-10-24 12:36",[1,1,1,1,0,1,0,0,0,0]],
+      [214020,"Karachi","Sujawal","BHU Plus Jhoke Sharif","2026-10-08 12:36",[1,1,1,1,0,1,0,0,0,0]],
+      [214040,"Karachi","Sujawal","RHC Chohar Jamali","2026-10-27 08:49",[1,1,1,1,1,1,1,1,1,1]],
+      [244037,"Sukkur","Sukkur","BHU Abad","2026-10-23 09:53",[1,1,1,1,0,1,1,0,0,0]],
+      [244039,"Sukkur","Sukkur","BHU Newpind","2026-10-06 11:26",[1,1,1,1,1,1,1,1,1,1]],
+      [244034,"Sukkur","Sukkur","BHU Tando Thatti","2026-10-12 11:27",[1,1,1,1,1,1,1,1,1,1]],
+      [216003,"Hyderabad","Tando Allahyar","BHU Bukera Sharif","2026-10-17 11:36",[0,0,0,1,0,1,1,0,0,0]],
+      [216015,"Hyderabad","Tando Allahyar","BHU Piyaro Lund","2026-10-17 12:32",[1,0,0,1,1,1,1,1,1,0]],
+      [216029,"Hyderabad","Tando Allahyar","RHC Missan","2026-10-31 11:22",[0,1,0,1,1,1,1,1,1,0]],
+      [216049,"Hyderabad","Tando Allahyar","RHC Nasarpur","2026-10-24 12:55",[1,1,1,1,1,1,1,1,1,1]],
+      [219010,"Hyderabad","Tando Muhammad Khan","BHU Plus Mulakatiar","2026-10-10 12:51",[1,1,1,1,0,1,1,0,0,0]],
+      [219017,"Hyderabad","Tando Muhammad Khan","BHU Plus Nazar Pur","2026-10-19 13:51",[0,1,0,1,1,1,1,1,1,0]],
+      [219012,"Hyderabad","Tando Muhammad Khan","BHU Plus Saeed Khan Lund","2026-10-06 11:45",[1,1,1,1,0,1,1,0,0,0]],
+      [219018,"Hyderabad","Tando Muhammad Khan","BHU Plus Saeed Pur Takkar","2026-10-10 10:50",[1,1,1,1,0,1,1,0,0,0]],
+      [219004,"Hyderabad","Tando Muhammad Khan","RHC Rajo Nizamani","2026-10-15 11:25",[1,0,0,1,0,1,0,0,0,0]],
+      [253002,"Mirpurkhas","Tharparkar - B","BHU Chelhar","2026-10-19 11:01",[1,1,1,1,1,1,1,1,1,1]],
+      [253008,"Mirpurkhas","Tharparkar - A","BHU Kaloi","2026-10-31 14:15",[1,1,1,1,1,1,1,1,1,1]],
+      [253016,"Mirpurkhas","Tharparkar - A","BHU Khario Ghulam Shah","2026-10-31 08:59",[1,1,1,1,1,1,1,1,1,1]],
+      [253010,"Mirpurkhas","Tharparkar - A","BHU Kot Arbab Mir Mohammed","2026-10-20 11:07",[1,1,1,0,0,0,0,0,0,0]],
+      [253084,"Mirpurkhas","Tharparkar - B","BHU Mubarak Rind","2026-10-26 14:21",[0,1,0,1,1,1,0,0,0,0]],
+      [253032,"Mirpurkhas","Tharparkar - A","RHC Islamkot","2026-10-13 10:36",[1,1,1,1,1,1,1,1,1,1]],
+      [253031,"Mirpurkhas","Tharparkar - B","RHC Kheensar","2026-10-24 10:21",[1,1,1,1,1,1,1,1,1,1]],
+      [217030,"Karachi","Thatta","BHU Ghulamullah","2026-10-21 11:06",[1,1,1,1,1,1,1,1,1,1]],
+      [254034,"Mirpurkhas","Umar Kot","BHU Ghulam Nabi Shah","2026-10-16 08:29",[1,1,1,1,1,1,0,0,0,0]],
+      [254050,"Mirpurkhas","Umar Kot","BHU Haji Fateh Mohammad Rajar","2026-10-19 10:40",[1,1,1,1,1,1,0,0,0,0]],
+      [254054,"Mirpurkhas","Umar Kot","BHU Kunri Memon","2026-10-30 08:34",[1,1,1,1,1,1,1,1,1,1]],
+      [254012,"Mirpurkhas","Umar Kot","BHU Nabisar Thar","2026-10-26 08:38",[0,1,0,1,1,1,1,1,1,0]],
+      [254042,"Mirpurkhas","Umar Kot","BHU Shadi Palli","2026-10-28 13:48",[1,1,1,1,1,1,1,1,1,1]],
+      [254077,"Mirpurkhas","Umar Kot","RHC Chhore","2026-10-29 09:29",[1,1,1,1,1,1,1,1,1,1]],
+      [254051,"Mirpurkhas","Umar Kot","RHC Hyder Farm","2026-10-05 11:33",[1,1,1,1,1,1,1,1,1,1]],
+      [254053,"Mirpurkhas","Umar Kot","RHC Khokhrapar","2026-10-27 08:31",[1,1,1,1,0,1,0,0,0,0]]
+    ];
+
+    /**
+     * ============================================================================
+     * 2. APPLICATION STATE & LOCALSTORAGE PERSISTENCE
+     * ============================================================================
+     */
+    const STORAGE_KEY = 'tb_audit_contestations_oct2026_v1';
+    const SETTINGS_KEY = 'tb_audit_settings_oct2026_v1';
+
+    // Map of cellKey ("facilityCode_indicatorIdx") -> { status: 'contested'|'verified', reason, justification, officer, evidenceId, submittedAt, verifierNotes, verifiedAt }
+    let contestationStore = {};
+
+    // UI Filter & Pagination State
+    let uiState = {
+      search: '',
+      region: 'ALL',
+      district: 'ALL',
+      status: 'ALL',
+      page: 1,
+      pageSize: 25,
+      countVerifiedAsCompliant: true,
+      chartsVisible: true
+    };
+
+    // Chart instances
+    let regionalChartInstance = null;
+    let indicatorChartInstance = null;
+
+    // Load saved state safely
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          contestationStore = JSON.parse(saved) || {};
+        }
+        const savedSettings = localStorage.getItem(SETTINGS_KEY);
+        if (savedSettings) {
+          const parsed = JSON.parse(savedSettings);
+          if (typeof parsed.countVerifiedAsCompliant === 'boolean') {
+            uiState.countVerifiedAsCompliant = parsed.countVerifiedAsCompliant;
+          }
+        }
+      } catch (err) {
+        console.error('Error loading saved contestations:', err);
+        contestationStore = {};
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(contestationStore));
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+          countVerifiedAsCompliant: uiState.countVerifiedAsCompliant
+        }));
+      } catch (err) {
+        console.error('Error persisting state:', err);
+      }
+    }
+
+    /**
+     * Returns the effective state of a cell:
+     * 'passed'   -> originally 1
+     * 'open'     -> originally 0, no contestation submitted
+     * 'contested'-> originally 0, contestation submitted, awaiting verification
+     * 'verified' -> originally 0, contestation verified & approved
+     */
+    function getCellState(facilityCode, indicatorIdx, rawFlag) {
+      if (rawFlag === 1) return 'passed';
+      const key = `${facilityCode}_${indicatorIdx}`;
+      const record = contestationStore[key];
+      if (!record) return 'open';
+      return record.status === 'verified' ? 'verified' : 'contested';
+    }
+
+    function getCellRecord(facilityCode, indicatorIdx) {
+      return contestationStore[`${facilityCode}_${indicatorIdx}`] || null;
+    }
+
+    /**
+     * Explains audit dependency rules for composite indicators
+     */
+    function getAuditRuleExplanation(row, indicatorIdx) {
+      const flags = row[5];
+      const names = INDICATORS;
+      switch (indicatorIdx) {
+        case 2: // Skilled staff present
+          return `Composite Staffing Rule: "Skilled staff present" requires BOTH "${names[0]}" (${flags[0] ? '✔' : '✖'}) AND "${names[1]}" (${flags[1] ? '✔' : '✖'}) to pass during the audit visit.`;
+        case 7: // Paediatric Medicine availability
+          return `Composite Paediatric Stock Rule: "Peadietric Medicine availability" requires BOTH "${names[4]}" (${flags[4] ? '✔' : '✖'}) AND "${names[6]}" (${flags[6] ? '✔' : '✖'}) to be in stock.`;
+        case 8: // Medicine availability
+          return `Composite Pharmacy Rule: "Medicine availability" requires Adult Drugs ("${names[3]}": ${flags[3] ? '✔' : '✖'}, "${names[5]}": ${flags[5] ? '✔' : '✖'}) AND Paediatric Drugs ("${names[7]}": ${flags[7] ? '✔' : '✖'}) to pass.`;
+        case 9: // Facility Functionality
+          return `Overall Functionality Rule: "Facility Functionality" requires BOTH "${names[2]}" (${flags[2] ? '✔' : '✖'}) AND "${names[8]}" (${flags[8] ? '✔' : '✖'}) to be compliant at the time of inspection.`;
+        default:
+          return `Direct Field Verification: Physical audit check for "${names[indicatorIdx]}" recorded non-compliance (✖) at ${row[4]}.`;
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 3. TOAST NOTIFICATIONS
+     * ============================================================================
+     */
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-emerald-900 text-white border-emerald-700',
+        warning: 'bg-amber-900 text-white border-amber-700',
+        info: 'bg-slate-900 text-white border-slate-700',
+        danger: 'bg-rose-900 text-white border-rose-700'
+      };
+      toast.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold flex items-center gap-2.5 transition-all duration-300 transform translate-y-2 opacity-0 ${colors[type] || colors.info}`;
+      toast.innerHTML = `<span>${message}</span>`;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    /**
+     * ============================================================================
+     * 4. METRICS COMPUTATION & KPI UPDATING
+     * ============================================================================
+     */
+    function computeMetrics() {
+      let totalFacilities = RAW_AUDIT_DATA.length;
+      let baselineFunctional = 0;
+      let effectiveFunctional = 0;
+
+      let openCells = 0;
+      let contestedCells = 0;
+      let verifiedCells = 0;
+
+      const facilitiesWithOpen = new Set();
+      const indicatorStats = INDICATORS.map(() => ({
+        passed: 0,
+        open: 0,
+        contested: 0,
+        verified: 0
+      }));
+
+      const regionMap = {};
+
+      RAW_AUDIT_DATA.forEach(row => {
+        const [code, region, district, name, dt, flags] = row;
+        if (!regionMap[region]) {
+          regionMap[region] = {
+            total: 0,
+            functional: 0,
+            openFacilities: 0,
+            contestedFacilities: 0
+          };
+        }
+        regionMap[region].total++;
+
+        if (flags[9] === 1) baselineFunctional++;
+
+        let rowHasOpen = false;
+        let rowHasContested = false;
+
+        flags.forEach((flag, idx) => {
+          const state = getCellState(code, idx, flag);
+          indicatorStats[idx][state]++;
+
+          if (state === 'open') {
+            openCells++;
+            rowHasOpen = true;
+            facilitiesWithOpen.add(code);
+          } else if (state === 'contested') {
+            contestedCells++;
+            rowHasContested = true;
+          } else if (state === 'verified') {
+            verifiedCells++;
+          }
+        });
+
+        // Determine effective Facility Functionality (index 9)
+        const funcState = getCellState(code, 9, flags[9]);
+        const isFunc = funcState === 'passed' || (uiState.countVerifiedAsCompliant && funcState === 'verified');
+        if (isFunc) {
+          effectiveFunctional++;
+          regionMap[region].functional++;
+        } else if (rowHasContested) {
+          regionMap[region].contestedFacilities++;
+        } else {
+          regionMap[region].openFacilities++;
+        }
+      });
+
+      return {
+        totalFacilities,
+        baselineFunctional,
+        effectiveFunctional,
+        openCells,
+        contestedCells,
+        verifiedCells,
+        facilitiesWithOpenCount: facilitiesWithOpen.size,
+        indicatorStats,
+        regionMap
+      };
+    }
+
+    function updateKPIs(metrics) {
+      const {
+        totalFacilities,
+        baselineFunctional,
+        effectiveFunctional,
+        openCells,
+        contestedCells,
+        verifiedCells,
+        facilitiesWithOpenCount
+      } = metrics;
+
+      const funcRate = ((effectiveFunctional / totalFacilities) * 100).toFixed(1);
+      const baseRate = ((baselineFunctional / totalFacilities) * 100).toFixed(1);
+      const delta = (parseFloat(funcRate) - parseFloat(baseRate)).toFixed(1);
+
+      document.getElementById('kpiTotalFacilities').textContent = totalFacilities;
+      document.getElementById('kpiFuncRate').textContent = `${funcRate}%`;
+      document.getElementById('kpiFuncSub').textContent = `${effectiveFunctional} / ${totalFacilities} facilities functional`;
+
+      const deltaEl = document.getElementById('kpiFuncDelta');
+      if (parseFloat(delta) > 0) {
+        deltaEl.textContent = `+${delta}%`;
+        deltaEl.classList.remove('hidden');
+      } else {
+        deltaEl.classList.add('hidden');
+      }
+
+      document.getElementById('kpiOpenCount').textContent = openCells;
+      document.getElementById('kpiOpenSub').textContent = `Across ${facilitiesWithOpenCount} facilities • Click ✖ to contest`;
+
+      document.getElementById('kpiContestedCount').textContent = contestedCells;
+      document.getElementById('kpiContestedSub').textContent = contestedCells === 1
+        ? '1 cell awaiting verification'
+        : `${contestedCells} cells awaiting verification`;
+
+      document.getElementById('kpiVerifiedCount').textContent = verifiedCells;
+      document.getElementById('kpiVerifiedSub').textContent = verifiedCells === 1
+        ? '1 resolution marked ✔ Verified'
+        : `${verifiedCells} resolutions marked ✔ Verified`;
+    }
+
+    /**
+     * ============================================================================
+     * 5. CHART.JS ANALYTICS RENDERING
+     * ============================================================================
+     */
+    function updateCharts(metrics) {
+      const regions = Object.keys(metrics.regionMap).sort((a, b) => metrics.regionMap[b].total - metrics.regionMap[a].total);
+      const functionalData = regions.map(r => metrics.regionMap[r].functional);
+      const contestedData = regions.map(r => metrics.regionMap[r].contestedFacilities);
+      const nonFuncOpenData = regions.map(r => metrics.regionMap[r].openFacilities);
+
+      const ctx1 = document.getElementById('regionalChart').getContext('2d');
+      if (regionalChartInstance) {
+        regionalChartInstance.data.labels = regions;
+        regionalChartInstance.data.datasets[0].data = functionalData;
+        regionalChartInstance.data.datasets[1].data = contestedData;
+        regionalChartInstance.data.datasets[2].data = nonFuncOpenData;
+        regionalChartInstance.update();
+      } else {
+        regionalChartInstance = new Chart(ctx1, {
+          type: 'bar',
+          data: {
+            labels: regions,
+            datasets: [
+              {
+                label: 'Functional (✔ / ✔ Verified)',
+                data: functionalData,
+                backgroundColor: '#10b981',
+                borderRadius: 4
+              },
+              {
+                label: 'Contested (Pending Review)',
+                data: contestedData,
+                backgroundColor: '#f59e0b',
+                borderRadius: 4
+              },
+              {
+                label: 'Non-Functional (Open ✖)',
+                data: nonFuncOpenData,
+                backgroundColor: '#ef4444',
+                borderRadius: 4
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { boxWidth: 12, font: { size: 11, family: 'Inter' } }
+              }
+            },
+            scales: {
+              x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+              y: { stacked: true, beginAtZero: true, ticks: { stepSize: 5, font: { size: 11 } } }
+            }
+          }
+        });
+      }
+
+      // Chart 2: Indicator Failure Breakdown (Sorted by total non-compliant baseline descending)
+      const indexedIndicators = INDICATORS.map((name, idx) => ({
+        idx,
+        shortName: INDICATOR_SHORT[idx],
+        open: metrics.indicatorStats[idx].open,
+        contested: metrics.indicatorStats[idx].contested,
+        verified: metrics.indicatorStats[idx].verified,
+        totalFailures: metrics.indicatorStats[idx].open + metrics.indicatorStats[idx].contested + metrics.indicatorStats[idx].verified
+      })).sort((a, b) => b.totalFailures - a.totalFailures);
+
+      const indLabels = indexedIndicators.map(i => i.shortName);
+      const indOpen = indexedIndicators.map(i => i.open);
+      const indContested = indexedIndicators.map(i => i.contested);
+      const indVerified = indexedIndicators.map(i => i.verified);
+
+      const ctx2 = document.getElementById('indicatorChart').getContext('2d');
+      if (indicatorChartInstance) {
+        indicatorChartInstance.data.labels = indLabels;
+        indicatorChartInstance.data.datasets[0].data = indOpen;
+        indicatorChartInstance.data.datasets[1].data = indContested;
+        indicatorChartInstance.data.datasets[2].data = indVerified;
+        indicatorChartInstance.update();
+      } else {
+        indicatorChartInstance = new Chart(ctx2, {
+          type: 'bar',
+          data: {
+            labels: indLabels,
+            datasets: [
+              {
+                label: 'Open (✖)',
+                data: indOpen,
+                backgroundColor: '#ef4444',
+                borderRadius: 3
+              },
+              {
+                label: 'Contested',
+                data: indContested,
+                backgroundColor: '#f59e0b',
+                borderRadius: 3
+              },
+              {
+                label: '✔ Verified',
+                data: indVerified,
+                backgroundColor: '#059669',
+                borderRadius: 3
+              }
+            ]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { boxWidth: 12, font: { size: 11, family: 'Inter' } }
+              }
+            },
+            scales: {
+              x: { stacked: true, beginAtZero: true, ticks: { font: { size: 11 } } },
+              y: { stacked: true, grid: { display: false }, ticks: { font: { size: 10.5 } } }
+            }
+          }
+        });
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 6. FILTERING, DROPDOWNS & TABLE RENDERING
+     * ============================================================================
+     */
+    function populateRegionDropdown() {
+      const regionSelect = document.getElementById('regionFilter');
+      const regions = [...new Set(RAW_AUDIT_DATA.map(r => r[1]))].sort();
+      regionSelect.innerHTML = `<option value="ALL">All Regions (${regions.length})</option>` +
+        regions.map(r => `<option value="${r}">${r}</option>`).join('');
+    }
+
+    function populateDistrictDropdown() {
+      const districtSelect = document.getElementById('districtFilter');
+      const selectedRegion = uiState.region;
+      const filteredRows = selectedRegion === 'ALL'
+        ? RAW_AUDIT_DATA
+        : RAW_AUDIT_DATA.filter(r => r[1] === selectedRegion);
+
+      const districts = [...new Set(filteredRows.map(r => r[2]))].sort();
+      districtSelect.innerHTML = `<option value="ALL">All Districts (${districts.length})</option>` +
+        districts.map(d => `<option value="${d}">${d}</option>`).join('');
+
+      if (uiState.district !== 'ALL' && !districts.includes(uiState.district)) {
+        uiState.district = 'ALL';
+      }
+      districtSelect.value = uiState.district;
+    }
+
+    function getFilteredRows() {
+      const q = uiState.search.trim().toLowerCase();
+
+      return RAW_AUDIT_DATA.filter(row => {
+        const [code, region, district, name, dt, flags] = row;
+
+        if (uiState.region !== 'ALL' && region !== uiState.region) return false;
+        if (uiState.district !== 'ALL' && district !== uiState.district) return false;
+
+        if (q) {
+          const matchCode = String(code).includes(q);
+          const matchName = name.toLowerCase().includes(q);
+          const matchDistrict = district.toLowerCase().includes(q);
+          if (!matchCode && !matchName && !matchDistrict) return false;
+        }
+
+        if (uiState.status !== 'ALL') {
+          let openCount = 0;
+          let contestedCount = 0;
+          let verifiedCount = 0;
+          flags.forEach((f, idx) => {
+            const st = getCellState(code, idx, f);
+            if (st === 'open') openCount++;
+            else if (st === 'contested') contestedCount++;
+            else if (st === 'verified') verifiedCount++;
+          });
+
+          if (uiState.status === 'HAS_OPEN' && openCount === 0) return false;
+          if (uiState.status === 'HAS_CONTESTED' && contestedCount === 0) return false;
+          if (uiState.status === 'HAS_VERIFIED' && verifiedCount === 0) return false;
+          if (uiState.status === 'COMPLIANT' && (openCount > 0 || contestedCount > 0)) return false;
+        }
+
+        return true;
+      });
+    }
+
+    function renderCellButton(code, idx, rawFlag) {
+      const state = getCellState(code, idx, rawFlag);
+
+      if (state === 'passed') {
+        return `
+          <button
+            type="button"
+            data-code="${code}"
+            data-idx="${idx}"
+            class="cell-action-btn inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-50/70 hover:bg-emerald-100 text-emerald-600 font-bold text-xs transition cursor-pointer"
+            title="Passed Audit — Click for details"
+          >✔</button>
+        `;
+      }
+
+      if (state === 'open') {
+        return `
+          <button
+            type="button"
+            data-code="${code}"
+            data-idx="${idx}"
+            class="cell-action-btn badge-pop inline-flex items-center justify-center gap-1 px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 border border-rose-200/90 font-bold text-xs shadow-2xs transition cursor-pointer"
+            title="Failed Audit (✖) — Click to open Contestation"
+          >✖</button>
+        `;
+      }
+
+      if (state === 'contested') {
+        return `
+          <button
+            type="button"
+            data-code="${code}"
+            data-idx="${idx}"
+            class="cell-action-btn badge-pop inline-flex items-center justify-center gap-1 px-2 py-1 rounded-lg bg-amber-100 hover:bg-amber-200/80 active:scale-95 text-amber-900 border border-amber-300 font-bold text-[11px] shadow-2xs transition cursor-pointer whitespace-nowrap"
+            title="Contestation Submitted — Click to Review & Verify"
+          ><span class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>Contested</button>
+        `;
+      }
+
+      // state === 'verified'
+      return `
+        <button
+          type="button"
+          data-code="${code}"
+          data-idx="${idx}"
+          class="cell-action-btn badge-pop inline-flex items-center justify-center gap-1 px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white border border-emerald-700 font-bold text-[11px] shadow-2xs transition cursor-pointer whitespace-nowrap"
+          title="Verified & Approved — Click to inspect verification log"
+        >✔ Verified</button>
+      `;
+    }
+
+    function renderRowSummaryBadge(code, flags) {
+      let openCount = 0;
+      let contestedCount = 0;
+      let verifiedCount = 0;
+
+      flags.forEach((f, idx) => {
+        const st = getCellState(code, idx, f);
+        if (st === 'open') openCount++;
+        else if (st === 'contested') contestedCount++;
+        else if (st === 'verified') verifiedCount++;
+      });
+
+      if (openCount === 0 && contestedCount === 0 && verifiedCount === 0) {
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Compliant</span>`;
+      }
+      if (openCount === 0 && contestedCount === 0 && verifiedCount > 0) {
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-teal-50 text-teal-800 border border-teal-200">✔ All Resolved</span>`;
+      }
+      if (contestedCount > 0) {
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">${contestedCount} Contested</span>`;
+      }
+      return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">${openCount} Open ✖</span>`;
+    }
+
+    function renderTable() {
+      const filtered = getFilteredRows();
+      const total = filtered.length;
+      const pageSize = uiState.pageSize;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      if (uiState.page > totalPages) uiState.page = totalPages;
+
+      const startIdx = (uiState.page - 1) * pageSize;
+      const endIdx = Math.min(startIdx + pageSize, total);
+      const pageRows = filtered.slice(startIdx, endIdx);
+
+      const tbody = document.getElementById('auditTableBody');
+
+      if (pageRows.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="15" class="py-12 text-center text-slate-500">
+              <div class="text-sm font-semibold text-slate-700">No facilities match your current filters</div>
+              <p class="text-xs mt-1">Try clearing your search query or switching the Region/Status filter.</p>
+            </td>
+          </tr>
+        `;
+      } else {
+        tbody.innerHTML = pageRows.map(row => {
+          const [code, region, district, name, dt, flags] = row;
+          const [datePart, timePart] = dt.split(' ');
+
+          const cellsHtml = flags.map((flag, idx) => {
+            const bgTint = idx === 9 ? 'bg-slate-50/70' : '';
+            return `<td class="py-2.5 px-2 text-center ${bgTint}">${renderCellButton(code, idx, flag)}</td>`;
+          }).join('');
+
+          return `
+            <tr class="hover:bg-indigo-50/30 transition-colors group">
+              <td class="py-2.5 px-3 font-mono font-semibold text-slate-700 sticky-col-1 bg-white group-hover:bg-slate-50">${code}</td>
+              <td class="py-2.5 px-3 font-semibold text-slate-900 sticky-col-2 bg-white group-hover:bg-slate-50 max-w-[190px] truncate" title="${name}">${name}</td>
+              <td class="py-2.5 px-3 sticky-col-3 bg-white group-hover:bg-slate-50 border-r border-slate-200">
+                <div class="font-medium text-slate-800">${district}</div>
+                <div class="text-[11px] text-slate-400">${region}</div>
+              </td>
+              <td class="py-2.5 px-3 text-slate-600 whitespace-nowrap">
+                <div class="font-medium">${datePart}</div>
+                <div class="text-[11px] text-slate-400">${timePart || ''}</div>
+              </td>
+              <td class="py-2.5 px-3 text-center border-r border-slate-200 whitespace-nowrap">
+                ${renderRowSummaryBadge(code, flags)}
+              </td>
+              ${cellsHtml}
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // Update match count label
+      const matchEl = document.getElementById('tableMatchCount');
+      if (total === 0) {
+        matchEl.textContent = 'Showing 0 facilities';
+      } else {
+        matchEl.textContent = `Showing ${startIdx + 1}–${endIdx} of ${total} facilities`;
+      }
+
+      renderPagination(totalPages);
+    }
+
+    function renderPagination(totalPages) {
+      const container = document.getElementById('paginationControls');
+      if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+      }
+
+      let html = `
+        <button type="button" data-page="${uiState.page - 1}" ${uiState.page === 1 ? 'disabled' : ''}
+          class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none cursor-pointer">
+          Prev
+        </button>
+      `;
+
+      for (let p = 1; p <= totalPages; p++) {
+        const active = p === uiState.page;
+        html += `
+          <button type="button" data-page="${p}"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+              active
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+            }">
+            ${p}
+          </button>
+        `;
+      }
+
+      html += `
+        <button type="button" data-page="${uiState.page + 1}" ${uiState.page === totalPages ? 'disabled' : ''}
+          class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none cursor-pointer">
+          Next
+        </button>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    /**
+     * ============================================================================
+     * 7. INTERACTIVE CONTESTATION & VERIFICATION MODAL WORKFLOW
+     * ============================================================================
+     */
+    let activeModalContext = null; // { code, idx }
+
+    function openCellModal(code, idx) {
+      const row = RAW_AUDIT_DATA.find(r => r[0] === code);
+      if (!row) return;
+
+      activeModalContext = { code, idx };
+      const [fCode, region, district, name, visitDt, flags] = row;
+      const rawFlag = flags[idx];
+      const state = getCellState(code, idx, rawFlag);
+      const record = getCellRecord(code, idx);
+      const indicatorName = INDICATORS[idx];
+      const ruleExplanation = getAuditRuleExplanation(row, idx);
+
+      const modal = document.getElementById('workflowModal');
+      const iconEl = document.getElementById('modalStatusIcon');
+      const titleEl = document.getElementById('modalTitle');
+      const badgeEl = document.getElementById('modalBadge');
+      const subtitleEl = document.getElementById('modalSubtitle');
+      const bodyEl = document.getElementById('modalBody');
+      const footerEl = document.getElementById('modalFooter');
+
+      subtitleEl.textContent = `${name} (Code: ${fCode}) • ${district}, ${region}`;
+
+      // Shared Audit Metadata Block
+      const auditSummaryCard = `
+        <div class="bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Audit Inspection Record</span>
+            <span class="text-xs font-mono font-semibold text-slate-600">Visit: ${visitDt}</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <span class="text-slate-400 block">Facility Name &amp; Code</span>
+              <span class="font-bold text-slate-800">${name} (${fCode})</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block">Region / District</span>
+              <span class="font-bold text-slate-800">${region} &bull; ${district}</span>
+            </div>
+            <div class="sm:col-span-2">
+              <span class="text-slate-400 block">Audited Indicator</span>
+              <span class="font-bold text-slate-900 text-sm">${indicatorName}</span>
+            </div>
+          </div>
+          <div class="text-xs bg-white border border-slate-200/80 rounded-lg p-2.5 text-slate-600">
+            <strong class="text-slate-800">Audit Rule Note:</strong> ${ruleExplanation}
+          </div>
+        </div>
+      `;
+
+      // CASE 1: PASSED (Read-only)
+      if (state === 'passed') {
+        iconEl.className = 'w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg shrink-0';
+        iconEl.textContent = '✔';
+        titleEl.textContent = 'Audit Indicator Compliant';
+        badgeEl.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800';
+        badgeEl.textContent = '✔ Passed';
+
+        bodyEl.innerHTML = `
+          ${auditSummaryCard}
+          <div class="p-4 rounded-xl bg-emerald-50/80 border border-emerald-200 text-emerald-900 text-xs flex items-start gap-3">
+            <span class="text-base font-bold text-emerald-600">✔</span>
+            <div>
+              <p class="font-bold">Verified Compliant During Field Audit</p>
+              <p class="mt-0.5 text-emerald-800">This indicator met all TB treatment standard requirements during the October 2026 inspection. No contestation action is required.</p>
+            </div>
+          </div>
+        `;
+
+        footerEl.innerHTML = `
+          <button type="button" id="modalCancelBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 transition cursor-pointer">
+            Close
+          </button>
+        `;
+      }
+
+      // CASE 2: OPEN CONTESTATION (✖) -> Show Audit Details + Submit Contestation Form
+      else if (state === 'open') {
+        iconEl.className = 'w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-lg shrink-0';
+        iconEl.textContent = '✖';
+        titleEl.textContent = 'Open Audit Contestation';
+        badgeEl.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700';
+        badgeEl.textContent = '✖ Non-Compliant (Open)';
+
+        bodyEl.innerHTML = `
+          ${auditSummaryCard}
+
+          <form id="contestationForm" class="space-y-4">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800">Submit Contestation Details</h4>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label for="contestReason" class="block text-xs font-semibold text-slate-700 mb-1">Contestation Reason Category *</label>
+                <select id="contestReason" required class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option value="Stock replenished & verified in pharmacy register">Stock replenished &amp; verified in pharmacy register</option>
+                  <option value="Staff on approved official leave / training duty">Staff on approved official leave / training duty</option>
+                  <option value="Audit timestamp / data entry discrepancy">Audit timestamp / data entry discrepancy</option>
+                  <option value="Buffer stock available in secondary store">Buffer stock available in secondary store</option>
+                  <option value="Facility functional with alternate MO coverage">Facility functional with alternate MO coverage</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="contestOfficer" class="block text-xs font-semibold text-slate-700 mb-1">Submitting Officer Name &amp; Role *</label>
+                <input type="text" id="contestOfficer" required placeholder="e.g., Dr. Imran Ahmed (District TB Coordinator)"
+                  class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+            </div>
+
+            <div>
+              <label for="contestEvidenceId" class="block text-xs font-semibold text-slate-700 mb-1">Supporting Document / Stock Voucher Ref #</label>
+              <input type="text" id="contestEvidenceId" placeholder="e.g., LIMS-2026-8841 or Attendance Log #14"
+                class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+
+            <div>
+              <label for="contestJustification" class="block text-xs font-semibold text-slate-700 mb-1">Detailed Justification &amp; Corrective Remarks *</label>
+              <textarea id="contestJustification" rows="3" required placeholder="Provide factual justification explaining why this ✖ finding should be contested and reviewed..."
+                class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+          </form>
+        `;
+
+        footerEl.innerHTML = `
+          <button type="button" id="modalCancelBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition cursor-pointer">
+            Cancel
+          </button>
+          <button type="button" id="btnSubmitContestation" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-sm transition cursor-pointer">
+            Submit Contestation &rarr; Mark as Contested
+          </button>
+        `;
+      }
+
+      // CASE 3: CONTESTED -> Show Submitted Contestation + Verification Controls
+      else if (state === 'contested') {
+        iconEl.className = 'w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-lg shrink-0';
+        iconEl.textContent = '⏳';
+        titleEl.textContent = 'Review & Verify Contestation';
+        badgeEl.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300';
+        badgeEl.textContent = 'Contested (Pending Verification)';
+
+        bodyEl.innerHTML = `
+          ${auditSummaryCard}
+
+          <!-- Submitted Contestation Details Card -->
+          <div class="bg-amber-50/70 rounded-xl border border-amber-200 p-4 space-y-2.5 text-xs">
+            <div class="flex items-center justify-between border-b border-amber-200/80 pb-2">
+              <span class="font-bold uppercase tracking-wider text-amber-900">Submitted Contestation Record</span>
+              <span class="text-amber-800 font-mono">${record?.submittedAt || ''}</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <span class="text-amber-700/80 block">Reason Category</span>
+                <span class="font-bold text-slate-900">${escapeHtml(record?.reason || '')}</span>
+              </div>
+              <div>
+                <span class="text-amber-700/80 block">Submitted By</span>
+                <span class="font-bold text-slate-900">${escapeHtml(record?.officer || '')}</span>
+              </div>
+              ${record?.evidenceId ? `
+              <div class="sm:col-span-2">
+                <span class="text-amber-700/80 block">Evidence / Voucher Reference</span>
+                <span class="font-mono font-semibold text-slate-800">${escapeHtml(record.evidenceId)}</span>
+              </div>` : ''}
+              <div class="sm:col-span-2">
+                <span class="text-amber-700/80 block">Justification</span>
+                <p class="mt-0.5 text-slate-800 bg-white/80 p-2.5 rounded-lg border border-amber-200/60">${escapeHtml(record?.justification || '')}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Supervisor Verification Input -->
+          <div class="space-y-2">
+            <label for="verifierNotes" class="block text-xs font-bold text-slate-800">Supervisor Verification Remarks</label>
+            <textarea id="verifierNotes" rows="2" placeholder="Enter verification remarks (e.g., Documentary evidence cross-checked with DHIS2 / LIMS stock ledger)..."
+              class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+          </div>
+        `;
+
+        footerEl.innerHTML = `
+          <button type="button" id="modalCancelBtn" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition cursor-pointer">
+            Close
+          </button>
+          <button type="button" id="btnRejectContestation" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition cursor-pointer">
+            Reject (Revert to ✖)
+          </button>
+          <button type="button" id="btnVerifyContestation" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition cursor-pointer">
+            ✔ Verify &amp; Approve (Mark ✔ Verified)
+          </button>
+        `;
+      }
+
+      // CASE 4: VERIFIED (✔ Verified) -> Show Complete Audit + Contestation + Verification Timeline
+      else if (state === 'verified') {
+        iconEl.className = 'w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shrink-0';
+        iconEl.textContent = '✔';
+        titleEl.textContent = 'Contestation Verified & Resolved';
+        badgeEl.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-600 text-white';
+        badgeEl.textContent = '✔ Verified';
+
+        bodyEl.innerHTML = `
+          ${auditSummaryCard}
+
+          <!-- Complete Lifecycle Timeline -->
+          <div class="bg-emerald-50/60 rounded-xl border border-emerald-200 p-4 space-y-3 text-xs">
+            <div class="font-bold uppercase tracking-wider text-emerald-900 border-b border-emerald-200 pb-2">
+              Resolution &amp; Verification Audit Trail
+            </div>
+
+            <div class="space-y-3 border-l-2 border-emerald-400 pl-3.5 ml-1">
+              <div>
+                <span class="font-bold text-rose-700">1. Initial Audit Finding: ✖ Non-Compliant</span>
+                <p class="text-slate-600">Recorded during facility visit on ${visitDt}</p>
+              </div>
+              <div>
+                <span class="font-bold text-amber-800">2. Contestation Submitted (${record?.submittedAt || ''})</span>
+                <p class="text-slate-800 font-semibold">${escapeHtml(record?.reason || '')} &mdash; by ${escapeHtml(record?.officer || '')}</p>
+                <p class="text-slate-600 mt-0.5">${escapeHtml(record?.justification || '')}</p>
+              </div>
+              <div>
+                <span class="font-bold text-emerald-800">3. Supervisor Verification: ✔ Verified (${record?.verifiedAt || ''})</span>
+                <p class="text-slate-700 mt-0.5">${escapeHtml(record?.verifierNotes || 'Verified and approved by regional monitoring supervisor.')}</p>
+              </div>
+            </div>
+          </div>
+        `;
+
+        footerEl.innerHTML = `
+          <button type="button" id="btnReopenCell" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-300 text-slate-600 hover:text-rose-700 hover:border-rose-300 transition cursor-pointer">
+            Reset Cell to ✖
+          </button>
+          <button type="button" id="modalCancelBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 transition cursor-pointer">
+            Done
+          </button>
+        `;
+      }
+
+      // Show Modal
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      // Attach modal action listeners
+      bindModalEvents();
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('workflowModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      activeModalContext = null;
+    }
+
+    function bindModalEvents() {
+      const cancelBtn = document.getElementById('modalCancelBtn');
+      if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+      // Submit Contestation (✖ -> Contested)
+      const submitBtn = document.getElementById('btnSubmitContestation');
+      if (submitBtn) {
+        submitBtn.addEventListener('click', () => {
+          const reason = document.getElementById('contestReason').value;
+          const officer = document.getElementById('contestOfficer').value.trim();
+          const evidenceId = document.getElementById('contestEvidenceId').value.trim();
+          const justification = document.getElementById('contestJustification').value.trim();
+
+          if (!officer || !justification) {
+            showToast('Please enter Officer Name and Justification before submitting.', 'warning');
+            return;
+          }
+
+          const { code, idx } = activeModalContext;
+          const key = `${code}_${idx}`;
+          contestationStore[key] = {
+            status: 'contested',
+            reason,
+            officer,
+            evidenceId,
+            justification,
+            submittedAt: formatNow()
+          };
+
+          saveState();
+          closeModal();
+          refreshDashboard();
+          showToast(`Contestation submitted! Cell updated to "Contested".`, 'warning');
+        });
+      }
+
+      // Verify Contestation (Contested -> ✔ Verified)
+      const verifyBtn = document.getElementById('btnVerifyContestation');
+      if (verifyBtn) {
+        verifyBtn.addEventListener('click', () => {
+          const { code, idx } = activeModalContext;
+          const key = `${code}_${idx}`;
+          const verifierNotes = document.getElementById('verifierNotes').value.trim();
+
+          if (contestationStore[key]) {
+            contestationStore[key].status = 'verified';
+            contestationStore[key].verifierNotes = verifierNotes || 'Supporting evidence verified and approved.';
+            contestationStore[key].verifiedAt = formatNow();
+          }
+
+          saveState();
+          closeModal();
+          refreshDashboard();
+          showToast(`Contestation verified! Cell updated to "✔ Verified".`, 'success');
+        });
+      }
+
+      // Reject Contestation (Contested -> ✖ Open)
+      const rejectBtn = document.getElementById('btnRejectContestation');
+      if (rejectBtn) {
+        rejectBtn.addEventListener('click', () => {
+          const { code, idx } = activeModalContext;
+          delete contestationStore[`${code}_${idx}`];
+          saveState();
+          closeModal();
+          refreshDashboard();
+          showToast(`Contestation rejected. Cell reverted to ✖ Open.`, 'danger');
+        });
+      }
+
+      // Reset verified cell back to ✖
+      const reopenBtn = document.getElementById('btnReopenCell');
+      if (reopenBtn) {
+        reopenBtn.addEventListener('click', () => {
+          const { code, idx } = activeModalContext;
+          delete contestationStore[`${code}_${idx}`];
+          saveState();
+          closeModal();
+          refreshDashboard();
+          showToast(`Cell reset to initial ✖ status.`, 'info');
+        });
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 8. DEMO POPULATE, RESET & CSV EXPORT UTILITIES
+     * ============================================================================
+     */
+    function populateDemoContestations() {
+      // Seed realistic sample contested and verified cells across several facilities
+      const samples = [
+        {
+          code: 211054, idx: 0, status: 'verified',
+          reason: 'Staff on approved official leave / training duty',
+          officer: 'Dr. Kamran Memon (DHO Badin)',
+          evidenceId: 'HR-TRN-2026-19',
+          justification: 'Medical Officer was attending Provincial NTP DOTS Training Workshop in Hyderabad on 24-Oct-2026.',
+          submittedAt: '2026-10-26 11:15',
+          verifierNotes: 'Training attendance certificate verified with Provincial TB Control Program.',
+          verifiedAt: '2026-10-28 15:40'
+        },
+        {
+          code: 211054, idx: 2, status: 'verified',
+          reason: 'Staff on approved official leave / training duty',
+          officer: 'Dr. Kamran Memon (DHO Badin)',
+          evidenceId: 'HR-TRN-2026-19',
+          justification: 'Composite skilled staff indicator resolved following verification of trained doctor duty roster.',
+          submittedAt: '2026-10-26 11:16',
+          verifierNotes: 'Verified alongside trained doctor presence.',
+          verifiedAt: '2026-10-28 15:41'
+        },
+        {
+          code: 211054, idx: 9, status: 'verified',
+          reason: 'Facility functional with alternate MO coverage',
+          officer: 'Dr. Kamran Memon (DHO Badin)',
+          evidenceId: 'OPD-LOG-104',
+          justification: 'TB DOTS clinic remained operational with medicines available and DOTS facilitator on duty.',
+          submittedAt: '2026-10-26 11:18',
+          verifierNotes: 'Confirmed facility functionality.',
+          verifiedAt: '2026-10-28 15:42'
+        },
+        {
+          code: 211056, idx: 4, status: 'contested',
+          reason: 'Stock replenished & verified in pharmacy register',
+          officer: 'Sajjad Ali (District Pharmacist)',
+          evidenceId: 'LIMS-IND-4092',
+          justification: 'RH 75mg/50mg batch #B442 received on 10-Oct-2026 morning from district warehouse.',
+          submittedAt: '2026-10-12 09:30'
+        },
+        {
+          code: 211056, idx: 7, status: 'contested',
+          reason: 'Stock replenished & verified in pharmacy register',
+          officer: 'Sajjad Ali (District Pharmacist)',
+          evidenceId: 'LIMS-IND-4092',
+          justification: 'Paediatric medicine availability restored upon RH 75/50 replenishment.',
+          submittedAt: '2026-10-12 09:32'
+        },
+        {
+          code: 212045, idx: 0, status: 'contested',
+          reason: 'Audit timestamp / data entry discrepancy',
+          officer: 'Dr. Farhan Soomro (Focal Person Dadu)',
+          evidenceId: 'BIO-ATT-212045',
+          justification: 'Biometric attendance confirms MO checked in at 08:45 AM; was conducting ward round during audit.',
+          submittedAt: '2026-10-09 14:10'
+        },
+        {
+          code: 213018, idx: 4, status: 'verified',
+          reason: 'Buffer stock available in secondary store',
+          officer: 'Dr. Ayesha Siddiqui (DTC Hyderabad)',
+          evidenceId: 'STR-HYD-772',
+          justification: '25 strips of RH 75/50 were stored in secondary cold/dry cabinet and verified by DHO.',
+          submittedAt: '2026-10-07 10:05',
+          verifierNotes: 'Physical stock balance verified.',
+          verifiedAt: '2026-10-08 16:20'
+        }
+      ];
+
+      samples.forEach(s => {
+        const { code, idx, ...rest } = s;
+        contestationStore[`${code}_${idx}`] = rest;
+      });
+
+      saveState();
+      refreshDashboard();
+      showToast('Loaded sample Contested & ✔ Verified records for demonstration.', 'info');
+    }
+
+    function exportUpdatedCsv() {
+      const headers = [
+        'Facility Code',
+        'Region',
+        'District',
+        'Facility Name',
+        'Date and time of visit',
+        ...INDICATORS,
+        'Summary Status'
+      ];
+
+      const rows = getFilteredRows().map(row => {
+        const [code, region, district, name, dt, flags] = row;
+        let openC = 0, contC = 0, verC = 0;
+
+        const cellStrings = flags.map((f, idx) => {
+          const st = getCellState(code, idx, f);
+          if (st === 'passed') return '✔';
+          if (st === 'open') { openC++; return '✖'; }
+          if (st === 'contested') { contC++; return 'Contested'; }
+          verC++; return '✔ Verified';
+        });
+
+        let summary = 'Compliant';
+        if (openC > 0 || contC > 0) {
+          summary = `Open: ${openC}, Contested: ${contC}, Verified: ${verC}`;
+        } else if (verC > 0) {
+          summary = `All Resolved (${verC} Verified)`;
+        }
+
+        return [code, region, district, name, dt, ...cellStrings, summary]
+          .map(val => `"${String(val).replace(/"/g, '""')}"`)
+          .join(',');
+      });
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `TB_Treatment_Audit_Contestations_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showToast('Exported updated CSV with current Contested & ✔ Verified statuses.', 'success');
+    }
+
+    /**
+     * ============================================================================
+     * 9. HELPERS & MASTER REFRESH
+     * ============================================================================
+     */
+    function formatNow() {
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function refreshDashboard() {
+      const metrics = computeMetrics();
+      updateKPIs(metrics);
+      updateCharts(metrics);
+      renderTable();
+    }
+
+    /**
+     * ============================================================================
+     * 10. INITIALIZATION & EVENT LISTENERS
+     * ============================================================================
+     */
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+
+      // Sync toggle checkbox with saved state
+      const toggleVerifiedEl = document.getElementById('toggleVerifiedCompliant');
+      toggleVerifiedEl.checked = uiState.countVerifiedAsCompliant;
+
+      populateRegionDropdown();
+      populateDistrictDropdown();
+      refreshDashboard();
+
+      // Search input
+      document.getElementById('searchInput').addEventListener('input', e => {
+        uiState.search = e.target.value;
+        uiState.page = 1;
+        renderTable();
+      });
+
+      // Region filter
+      document.getElementById('regionFilter').addEventListener('change', e => {
+        uiState.region = e.target.value;
+        uiState.page = 1;
+        populateDistrictDropdown();
+        renderTable();
+      });
+
+      // District filter
+      document.getElementById('districtFilter').addEventListener('change', e => {
+        uiState.district = e.target.value;
+        uiState.page = 1;
+        renderTable();
+      });
+
+      // Status filter
+      document.getElementById('statusFilter').addEventListener('change', e => {
+        uiState.status = e.target.value;
+        uiState.page = 1;
+        renderTable();
+      });
+
+      // Page size selector
+      document.getElementById('pageSizeSelect').addEventListener('change', e => {
+        uiState.pageSize = parseInt(e.target.value, 10);
+        uiState.page = 1;
+        renderTable();
+      });
+
+      // Pagination click delegation
+      document.getElementById('paginationControls').addEventListener('click', e => {
+        const btn = e.target.closest('button[data-page]');
+        if (!btn || btn.disabled) return;
+        uiState.page = parseInt(btn.dataset.page, 10);
+        renderTable();
+      });
+
+      // Table cell click delegation
+      document.getElementById('auditTableBody').addEventListener('click', e => {
+        const btn = e.target.closest('.cell-action-btn');
+        if (!btn) return;
+        const code = parseInt(btn.dataset.code, 10);
+        const idx = parseInt(btn.dataset.idx, 10);
+        openCellModal(code, idx);
+      });
+
+      // Toggle: Count Verified as Compliant
+      toggleVerifiedEl.addEventListener('change', e => {
+        uiState.countVerifiedAsCompliant = e.target.checked;
+        saveState();
+        refreshDashboard();
+      });
+
+      // Toggle Charts Collapse
+      document.getElementById('btnToggleCharts').addEventListener('click', () => {
+        uiState.chartsVisible = !uiState.chartsVisible;
+        const container = document.getElementById('chartsContainer');
+        const label = document.getElementById('toggleChartsLabel');
+        const icon = document.getElementById('toggleChartsIcon');
+        if (uiState.chartsVisible) {
+          container.classList.remove('hidden');
+          label.textContent = 'Hide Charts';
+          icon.classList.remove('rotate-180');
+        } else {
+          container.classList.add('hidden');
+          label.textContent = 'Show Charts';
+          icon.classList.add('rotate-180');
+        }
+      });
+
+      // Demo Populate button
+      document.getElementById('btnDemoPopulate').addEventListener('click', populateDemoContestations);
+
+      // Reset All button (uses inline confirmation banner in modal instead of browser confirm())
+      document.getElementById('btnResetAll').addEventListener('click', () => {
+        const modal = document.getElementById('workflowModal');
+        const iconEl = document.getElementById('modalStatusIcon');
+        const titleEl = document.getElementById('modalTitle');
+        const badgeEl = document.getElementById('modalBadge');
+        const subtitleEl = document.getElementById('modalSubtitle');
+        const bodyEl = document.getElementById('modalBody');
+        const footerEl = document.getElementById('modalFooter');
+
+        iconEl.className = 'w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-lg shrink-0';
+        iconEl.textContent = '!';
+        titleEl.textContent = 'Reset All Contestations';
+        badgeEl.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700';
+        badgeEl.textContent = 'Confirm Action';
+        subtitleEl.textContent = 'Restore baseline October 2026 audit data';
+
+        bodyEl.innerHTML = `
+          <p class="text-sm text-slate-700">
+            Are you sure you want to clear all submitted <strong>Contested</strong> and <strong>✔ Verified</strong> records and restore all 298 baseline <strong>✖</strong> findings?
+          </p>
+        `;
+
+        footerEl.innerHTML = `
+          <button type="button" id="modalCancelBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition cursor-pointer">
+            Cancel
+          </button>
+          <button type="button" id="btnConfirmReset" class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition cursor-pointer">
+            Yes, Reset All to Baseline
+          </button>
+        `;
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
+        document.getElementById('btnConfirmReset').addEventListener('click', () => {
+          contestationStore = {};
+          saveState();
+          closeModal();
+          refreshDashboard();
+          showToast('All contestations cleared. Baseline audit restored.', 'info');
+        });
+      });
+
+      // Export CSV button
+      document.getElementById('btnExportCsv').addEventListener('click', exportUpdatedCsv);
+
+      // Modal close on backdrop click or Escape key
+      document.getElementById('btnCloseModal').addEventListener('click', closeModal);
+      document.getElementById('workflowModal').addEventListener('click', e => {
+        if (e.target.id === 'workflowModal') closeModal();
+      });
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !document.getElementById('workflowModal').classList.contains('hidden')) {
+          closeModal();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

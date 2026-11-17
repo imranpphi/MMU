@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMU - Health Facility Open & Closed Status</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-canvas: #f8fafc;
+            --brand-dark: #0f172a;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --open-green: #059669;
+            --closed-red: #dc2626;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-canvas);
+            color: var(--text-dark);
+            min-height: 100vh;
+        }
+
+        /* Top Brand Navigation Header */
+        .navbar-mmu {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 14px 28px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .navbar-brand-title {
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 1.2rem;
+            letter-spacing: -0.01em;
+        }
+
+        .navbar-subtext {
+            color: #94a3b8;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        /* Page Content Header */
+        .page-header-card {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 20px 32px;
+        }
+
+        /* Main Section Cards */
+        .log-card {
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .log-card-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header-open {
+            color: var(--open-green);
+        }
+
+        .header-closed {
+            color: var(--closed-red);
+        }
+
+        /* Search Input Styling for Closed Table */
+        .closed-search-wrapper {
+            position: relative;
+            width: 260px;
+            max-width: 100%;
+        }
+
+        .closed-search-wrapper .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 0.82rem;
+            pointer-events: none;
+        }
+
+        .closed-search-input {
+            padding-left: 34px;
+            padding-right: 30px;
+            font-size: 0.82rem;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background-color: #f8fafc;
+            transition: all 0.2s ease;
+        }
+
+        .closed-search-input:focus {
+            background-color: #ffffff;
+            border-color: #0f172a;
+            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+        }
+
+        .closed-search-clear {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            padding: 2px 4px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .closed-search-clear:hover {
+            color: #dc2626;
+        }
+
+        /* Table Aesthetics */
+        .table-responsive {
+            border-radius: 0 0 16px 16px;
+        }
+
+        .custom-table {
+            margin-bottom: 0;
+            font-size: 0.85rem;
+            vertical-align: middle;
+        }
+
+        .custom-table thead th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            padding: 13px 14px;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        .custom-table tbody tr {
+            transition: background 0.15s ease;
+        }
+
+        .custom-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .custom-table td {
+            padding: 13px 14px;
+            color: #1e293b;
+            border-bottom: 1px solid #f1f5f9;
+            white-space: nowrap;
+        }
+
+        /* Status Badges */
+        .badge-open {
+            background-color: #d1fae5;
+            color: #047857;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .badge-closed {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .badge-closed:hover {
+            background-color: #fecaca;
+            box-shadow: 0 2px 6px rgba(185, 28, 28, 0.2);
+            transform: translateY(-1px);
+        }
+
+        /* Action Buttons */
+        .btn-excel {
+            color: #047857;
+            background-color: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            font-weight: 600;
+            font-size: 0.82rem;
+            padding: 6px 14px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-excel:hover {
+            background-color: #059669;
+            color: #ffffff;
+            border-color: #059669;
+        }
+
+        /* File Preview Box in Modal */
+        .file-preview-box {
+            border: 1px dashed #cbd5e1;
+            border-radius: 10px;
+            background-color: #f8fafc;
+            padding: 12px;
+        }
+
+        .file-preview-box img {
+            max-height: 200px;
+            width: auto;
+            max-width: 100%;
+            border-radius: 8px;
+            object-fit: contain;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .file-preview-box iframe {
+            width: 100%;
+            height: 220px;
+            border: none;
+            border-radius: 8px;
+        }
+
+        /* Pagination Toolbar Styling */
+        .table-pagination-footer {
+            padding: 12px 24px;
+            background-color: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.82rem;
+        }
+        .pagination .page-link {
+            font-size: 0.8rem;
+            padding: 0.375rem 0.65rem;
+            color: #475569;
+        }
+        .pagination .page-item.active .page-link {
+            background-color: #0f172a;
+            border-color: #0f172a;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Full Navbar Header -->
+    <nav class="navbar navbar-mmu navbar-dark">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <i class="fa-solid fa-hospital-user fa-2x text-info me-3"></i>
+                <div>
+                    <div class="navbar-brand-title">MMU Portal</div>
+                    <div class="navbar-subtext">Ministers Monitoring Unit</div>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <a href="index.html" class="btn btn-outline-light btn-sm rounded-pill px-3 fw-semibold">
+                    <i class="fa-solid fa-arrow-left me-1"></i> Back to Dashboard
+                </a>
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-semibold">
+                    <i class="fa-solid fa-circle fa-2xs me-1"></i> Field Audit Live
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Title Bar -->
+    <div class="page-header-card">
+        <div class="container-fluid">
+            <h4 class="m-0 fw-bold text-dark">Health Facility Open & Closed Status Log</h4>
+            <small class="text-muted">Detailed monitoring inspection report per facility</small>
+        </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="container-fluid p-4">
+        <div class="row g-4">
+
+            <!-- 1. HEALTH FACILITY CLOSED TABLE (With Search Filter) -->
+            <div class="col-xl-12">
+                <div class="log-card">
+                    <div class="log-card-header">
+                        <h5 class="m-0 fw-bold header-closed d-flex align-items-center">
+                            <i class="fa-solid fa-door-closed me-2"></i> Health Facility Closed
+                        </h5>
+
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <!-- Search Filter for Closed Table Only -->
+                            <div class="closed-search-wrapper">
+                                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                                <input type="text" id="closedTableSearch" class="form-control form-control-sm closed-search-input" placeholder="Search closed facilities..." oninput="filterClosedTable()">
+                                <button type="button" id="closedSearchClearBtn" class="closed-search-clear" title="Clear search" onclick="clearClosedSearch()">
+                                    <i class="fa-solid fa-circle-xmark"></i>
+                                </button>
+                            </div>
+
+                            <button class="btn btn-excel" onclick="exportToExcel('closedTable', 'Health_Facility_Closed_Log')">
+                                <i class="fa-solid fa-file-excel me-1"></i> Export Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive flex-grow-1">
+                        <table class="table custom-table align-middle" id="closedTable" data-page-size="5" data-current-page="1">
+                            <thead>
+                                <tr>
+                                    <th>HF Code</th>
+                                    <th>Region</th>
+                                    <th>Dist</th>
+                                    <th>HF Name</th>
+                                    <th>HF Type</th>
+                                    <th>Working Status</th>
+                                    <th>Visit Time & Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">212,019</td>
+                                    <td>Larkana</td>
+                                    <td>Dadu</td>
+                                    <td class="fw-bold">BHU Kamal Khan</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">BHU</span></td>
+                                    <td>(24/7)</td>
+                                    <td>08:17 AM, 26-Oct-2026</td>
+                                    <td>
+                                        <span class="badge-closed" role="button" style="cursor: pointer;" onclick="openContestationModal('212,019', 'BHU Kamal Khan')">
+                                            <i class="fa-solid fa-circle-xmark me-1"></i>Closed
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">212,047</td>
+                                    <td>Larkana</td>
+                                    <td>Dadu</td>
+                                    <td class="fw-bold">BHU Kolachi</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">BHU</span></td>
+                                    <td>(24/7)</td>
+                                    <td>08:27 AM, 14-Oct-2026</td>
+                                    <td>
+                                        <span class="badge-closed" role="button" style="cursor: pointer;" onclick="openContestationModal('212,047', 'BHU Kolachi')">
+                                            <i class="fa-solid fa-circle-xmark me-1"></i>Closed
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">212,079</td>
+                                    <td>Larkana</td>
+                                    <td>Dadu</td>
+                                    <td class="fw-bold">BHU Mitho Babar</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">BHU</span></td>
+                                    <td>(6/6)</td>
+                                    <td>08:28 AM, 08-Oct-2026</td>
+                                    <td>
+                                        <span class="badge-closed" role="button" style="cursor: pointer;" onclick="openContestationModal('212,079', 'BHU Mitho Babar')">
+                                            <i class="fa-solid fa-circle-xmark me-1"></i>Closed
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">212,139</td>
+                                    <td>Larkana</td>
+                                    <td>Dadu</td>
+                                    <td class="fw-bold">GD Amber</td>
+                                    <td><span class="badge bg-info-subtle text-info-emphasis">GD</span></td>
+                                    <td>(6/6)</td>
+                                    <td>10:00 AM, 27-Oct-2026</td>
+                                    <td>
+                                        <span class="badge-closed" role="button" style="cursor: pointer;" onclick="openContestationModal('212,139', 'GD Amber')">
+                                            <i class="fa-solid fa-circle-xmark me-1"></i>Closed
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">212,004</td>
+                                    <td>Larkana</td>
+                                    <td>Dadu</td>
+                                    <td class="fw-bold">Kero</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">GD</span></td>
+                                    <td>(6/6)</td>
+                                    <td>08:39 AM, 27-Oct-2026</td>
+                                    <td>
+                                        <span class="badge-closed" role="button" style="cursor: pointer;" onclick="openContestationModal('212,004', 'Kero')">
+                                            <i class="fa-solid fa-circle-xmark me-1"></i>Closed
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">212,130</td>
+                                    <td>Larkana</td>
+                                    <td>Dadu</td>
+                                    <td class="fw-bold">MCH Shah Panjo</td>
+                                    <td><span class="badge bg-warning-subtle text-warning-emphasis">MCH</span></td>
+                                    <td>(6/6)</td>
+                                    <td>09:08 AM, 03-Oct-2026</td>
+                                    <td>
+                                        <span class="badge-closed" role="button" style="cursor: pointer;" onclick="openContestationModal('212,130', 'MCH Shah Panjo')">
+                                            <i class="fa-solid fa-circle-xmark me-1"></i>Closed
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">213,037</td>
+                                    <td>Hyderabad</td>
+                                    <td>Hyderabad</td>
+                                    <td class="fw-bold">GD Mehrab Talpur</td>
+                                    <td><span class="badge bg-info-subtle text-info-emphasis">GD</span></td>
+                                    <td>(6/6)</td>
+                                    <td>10:30 AM, 03-Oct-2026</td>
+                                    <td>
+                                        <span class="badge-closed" role="button" style="cursor: pointer;" onclick="openContestationModal('213,037', 'GD Mehrab Talpur')">
+                                            <i class="fa-solid fa-circle-xmark me-1"></i>Closed
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">234,117</td>
+                                    <td>Larkana</td>
+                                    <td>Kamber</td>
+                                    <td class="fw-bold">GD Abdul Wahab Khoso</td>
+                                    <td><span class="badge bg-info-subtle text-info-emphasis">GD</span></td>
+                                    <td>(6/6)</td>
+                                    <td>10:23 AM, 10-Oct-2026</td>
+                                    <td>
+                                        <span class="badge-closed" role="button" style="cursor: pointer;" onclick="openContestationModal('234,117', 'GD Abdul Wahab Khoso')">
+                                            <i class="fa-solid fa-circle-xmark me-1"></i>Closed
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">221,008</td>
+                                    <td>Karachi</td>
+                                    <td>Karachi 2 B</td>
+                                    <td class="fw-bold">RHC Baldia</td>
+                                    <td><span class="badge bg-primary-subtle text-primary">RHC</span></td>
+                                    <td>(6/6)</td>
+                                    <td>01:36 PM, 29-Oct-2026</td>
+                                    <td>
+                                        <span class="badge-closed" role="button" style="cursor: pointer;" onclick="openContestationModal('221,008', 'RHC Baldia')">
+                                            <i class="fa-solid fa-circle-xmark me-1"></i>Closed
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">241,232</td>
+                                    <td>Sukkur</td>
+                                    <td>Khairpur - B</td>
+                                    <td class="fw-bold">GD Abdul Khair Ujan</td>
+                                    <td><span class="badge bg-info-subtle text-info-emphasis">GD</span></td>
+                                    <td>(6/6)</td>
+                                    <td>08:30 AM, 30-Oct-2026</td>
+                                    <td>
+                                        <span class="badge-closed" role="button" style="cursor: pointer;" onclick="openContestationModal('241,232', 'GD Abdul Khair Ujan')">
+                                            <i class="fa-solid fa-circle-xmark me-1"></i>Closed
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr id="closedNoResultsRow" style="display: none;">
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="fa-solid fa-magnifying-glass me-1"></i> No matching closed health facilities found.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Closed Table Pagination Controls -->
+                    <div class="table-pagination-footer d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted">Rows per page:</span>
+                            <select class="form-select form-select-sm" style="width: 70px;" onchange="changePageSize('closedTable', this.value)">
+                                <option value="3">3</option>
+                                <option value="5" selected>5</option>
+                                <option value="10">10</option>
+                            </select>
+                        </div>
+                        <div id="closedTableInfo" class="text-muted">Showing 0 to 0 of 0 entries</div>
+                        <ul class="pagination pagination-sm m-0" id="closedTablePagination"></ul>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 2. HEALTH FACILITY OPEN TABLE -->
+            <div class="col-xl-12">
+                <div class="log-card">
+                    <div class="log-card-header">
+                        <h5 class="m-0 fw-bold header-open d-flex align-items-center">
+                            <i class="fa-solid fa-door-open me-2"></i> Health Facility Open
+                        </h5>
+                        <button class="btn btn-excel" onclick="exportToExcel('openTable', 'Health_Facility_Open_Log')">
+                            <i class="fa-solid fa-file-excel me-1"></i> Export Excel
+                        </button>
+                    </div>
+
+                    <div class="table-responsive flex-grow-1">
+                        <table class="table custom-table align-middle" id="openTable" data-page-size="5" data-current-page="1">
+                            <thead>
+                                <tr>
+                                    <th>HF Code</th>
+                                    <th>Region</th>
+                                    <th>Dist</th>
+                                    <th>HF Name</th>
+                                    <th>HF Type</th>
+                                    <th>Working Status</th>
+                                    <th>Visit Time & Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">211,049</td>
+                                    <td>Mirpurkhas</td>
+                                    <td>Badin - A</td>
+                                    <td class="fw-bold">BHU Ali Murad Chandio</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">BHU</span></td>
+                                    <td>(6/6)</td>
+                                    <td>12:28 PM, 29-Oct-2026</td>
+                                    <td><span class="badge-open"><i class="fa-solid fa-circle-check me-1"></i>Open</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">211,002</td>
+                                    <td>Mirpurkhas</td>
+                                    <td>Badin - A</td>
+                                    <td class="fw-bold">BHU Artillary Chak</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">BHU</span></td>
+                                    <td>(6/6)</td>
+                                    <td>11:11 AM, 22-Oct-2026</td>
+                                    <td><span class="badge-open"><i class="fa-solid fa-circle-check me-1"></i>Open</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">211,124</td>
+                                    <td>Mirpurkhas</td>
+                                    <td>Badin - B</td>
+                                    <td class="fw-bold">BHU Ashraf Samoon</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">BHU</span></td>
+                                    <td>(6/6)</td>
+                                    <td>10:10 AM, 20-Oct-2026</td>
+                                    <td><span class="badge-open"><i class="fa-solid fa-circle-check me-1"></i>Open</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">211,017</td>
+                                    <td>Mirpurkhas</td>
+                                    <td>Badin - B</td>
+                                    <td class="fw-bold">BHU Choudhary Fateh Muhammad</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">BHU</span></td>
+                                    <td>(6/6)</td>
+                                    <td>10:10 AM, 22-Oct-2026</td>
+                                    <td><span class="badge-open"><i class="fa-solid fa-circle-check me-1"></i>Open</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">211,054</td>
+                                    <td>Mirpurkhas</td>
+                                    <td>Badin - A</td>
+                                    <td class="fw-bold">BHU Dadah</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">BHU</span></td>
+                                    <td>(24/7)</td>
+                                    <td>08:31 AM, 24-Oct-2026</td>
+                                    <td><span class="badge-open"><i class="fa-solid fa-circle-check me-1"></i>Open</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">211,073</td>
+                                    <td>Mirpurkhas</td>
+                                    <td>Badin - B</td>
+                                    <td class="fw-bold">BHU Gharo</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">BHU</span></td>
+                                    <td>(6/6)</td>
+                                    <td>09:28 AM, 22-Oct-2026</td>
+                                    <td><span class="badge-open"><i class="fa-solid fa-circle-check me-1"></i>Open</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">211,051</td>
+                                    <td>Mirpurkhas</td>
+                                    <td>Badin - B</td>
+                                    <td class="fw-bold">BHU Ghulam Muhammad Nizamani</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">BHU</span></td>
+                                    <td>(6/6)</td>
+                                    <td>09:26 AM, 16-Oct-2026</td>
+                                    <td><span class="badge-open"><i class="fa-solid fa-circle-check me-1"></i>Open</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">211,018</td>
+                                    <td>Mirpurkhas</td>
+                                    <td>Badin - B</td>
+                                    <td class="fw-bold">BHU Gulab Laghari</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">BHU</span></td>
+                                    <td>(24/7)</td>
+                                    <td>08:17 AM, 17-Oct-2026</td>
+                                    <td><span class="badge-open"><i class="fa-solid fa-circle-check me-1"></i>Open</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">211,005</td>
+                                    <td>Mirpurkhas</td>
+                                    <td>Badin - A</td>
+                                    <td class="fw-bold">BHU Haji Muhammad Boohar</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">BHU</span></td>
+                                    <td>(6/6)</td>
+                                    <td>11:28 AM, 29-Oct-2026</td>
+                                    <td><span class="badge-open"><i class="fa-solid fa-circle-check me-1"></i>Open</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-secondary">211,123</td>
+                                    <td>Mirpurkhas</td>
+                                    <td>Badin - B</td>
+                                    <td class="fw-bold">BHU Haji Ramzan Chandio</td>
+                                    <td><span class="badge bg-secondary-subtle text-dark">BHU</span></td>
+                                    <td>(6/6)</td>
+                                    <td>09:37 AM, 21-Oct-2026</td>
+                                    <td><span class="badge-open"><i class="fa-solid fa-circle-check me-1"></i>Open</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Open Table Pagination Controls -->
+                    <div class="table-pagination-footer d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted">Rows per page:</span>
+                            <select class="form-select form-select-sm" style="width: 70px;" onchange="changePageSize('openTable', this.value)">
+                                <option value="3">3</option>
+                                <option value="5" selected>5</option>
+                                <option value="10">10</option>
+                            </select>
+                        </div>
+                        <div id="openTableInfo" class="text-muted">Showing 0 to 0 of 0 entries</div>
+                        <ul class="pagination pagination-sm m-0" id="openTablePagination"></ul>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modal for Contestation on Closed Status -->
+    <div class="modal fade" id="contestationModal" tabindex="-1" aria-labelledby="contestationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title fw-bold" id="contestationModalLabel">Submit Closure Contestation</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="contestationForm" onsubmit="submitContestation(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-muted small">Health Facility</label>
+                            <input type="text" class="form-control bg-light" id="contestFacilityInfo" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="contestReason" class="form-label fw-semibold">Reason <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="contestReason" rows="3" placeholder="Enter your reason for contesting..." required></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="contestEvidenceFile" class="form-label fw-semibold">Attach Evidence File <span class="text-danger">*</span></label>
+                            <input class="form-control" type="file" id="contestEvidenceFile" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="previewUploadedFile(event)" required>
+                        </div>
+
+                        <!-- Live File Preview Container -->
+                        <div id="filePreviewContainer" class="file-preview-box d-none">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="small fw-semibold text-dark text-truncate" id="previewFileName" style="max-width: 80%;"></span>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" onclick="clearUploadedFile()">
+                                    <i class="fa-solid fa-xmark me-1"></i>Remove
+                                </button>
+                            </div>
+                            <div id="filePreviewContent" class="text-center"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-sm px-4">
+                            <i class="fa-solid fa-paper-plane me-1"></i> Submit Contestation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JavaScript Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Filter Closed Table Rows
+        function filterClosedTable() {
+            const searchInput = document.getElementById('closedTableSearch');
+            const clearBtn = document.getElementById('closedSearchClearBtn');
+            const query = searchInput.value.trim().toLowerCase();
+
+            clearBtn.style.display = query.length > 0 ? 'block' : 'none';
+
+            const table = document.getElementById('closedTable');
+            const rows = Array.from(table.querySelectorAll('tbody tr:not(#closedNoResultsRow)'));
+
+            rows.forEach(row => {
+                const rowText = row.innerText.toLowerCase();
+                if (!query || rowText.includes(query)) {
+                    row.removeAttribute('data-filtered-out');
+                } else {
+                    row.setAttribute('data-filtered-out', 'true');
+                }
+            });
+
+            table.setAttribute('data-current-page', 1);
+            renderPagination('closedTable');
+        }
+
+        function clearClosedSearch() {
+            const searchInput = document.getElementById('closedTableSearch');
+            searchInput.value = '';
+            filterClosedTable();
+            searchInput.focus();
+        }
+
+        // Pagination Engine (Supports Search Filtering)
+        function renderPagination(tableId) {
+            const table = document.getElementById(tableId);
+            const pageSize = parseInt(table.getAttribute('data-page-size')) || 5;
+            let currentPage = parseInt(table.getAttribute('data-current-page')) || 1;
+
+            const tbody = table.querySelector('tbody');
+            const allRows = Array.from(tbody.querySelectorAll('tr:not(#closedNoResultsRow)'));
+            const matchingRows = allRows.filter(row => !row.hasAttribute('data-filtered-out'));
+            const noResultsRow = document.getElementById(tableId === 'closedTable' ? 'closedNoResultsRow' : '');
+            
+            const totalEntries = matchingRows.length;
+            const totalPages = Math.ceil(totalEntries / pageSize) || 1;
+
+            if (currentPage > totalPages) currentPage = totalPages;
+            table.setAttribute('data-current-page', currentPage);
+
+            const startIdx = (currentPage - 1) * pageSize;
+            const endIdx = startIdx + pageSize;
+
+            allRows.forEach(row => row.style.display = 'none');
+            matchingRows.slice(startIdx, endIdx).forEach(row => row.style.display = '');
+
+            if (noResultsRow) {
+                noResultsRow.style.display = totalEntries === 0 ? '' : 'none';
+            }
+
+            const infoElem = document.getElementById(tableId + 'Info');
+            if (infoElem) {
+                const showingStart = totalEntries === 0 ? 0 : startIdx + 1;
+                const showingEnd = Math.min(endIdx, totalEntries);
+                infoElem.textContent = `Showing ${showingStart} to ${showingEnd} of ${totalEntries} entries`;
+            }
+
+            const pagContainer = document.getElementById(tableId + 'Pagination');
+            if (!pagContainer) return;
+            pagContainer.innerHTML = '';
+
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 || totalEntries === 0 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage('${tableId}', ${currentPage - 1}); return false;">Previous</a>`;
+            pagContainer.appendChild(prevLi);
+
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                li.innerHTML = `<a class="page-link" href="#" onclick="changePage('${tableId}', ${i}); return false;">${i}</a>`;
+                pagContainer.appendChild(li);
+            }
+
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages || totalEntries === 0 ? 'disabled' : ''}`;
+            nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage('${tableId}', ${currentPage + 1}); return false;">Next</a>`;
+            pagContainer.appendChild(nextLi);
+        }
+
+        function changePage(tableId, pageNum) {
+            const table = document.getElementById(tableId);
+            table.setAttribute('data-current-page', pageNum);
+            renderPagination(tableId);
+        }
+
+        function changePageSize(tableId, newSize) {
+            const table = document.getElementById(tableId);
+            table.setAttribute('data-page-size', newSize);
+            table.setAttribute('data-current-page', 1);
+            renderPagination(tableId);
+        }
+
+        // CSV Export Functionality (Exports visible/matching rows)
+        function exportToExcel(tableId, filename) {
+            const table = document.getElementById(tableId);
+            let csv = [];
+            
+            let headers = [];
+            const ths = table.querySelectorAll('thead th');
+            ths.forEach(th => {
+                headers.push('"' + th.innerText.trim().replace(/"/g, '""') + '"');
+            });
+            csv.push(headers.join(','));
+
+            const trs = Array.from(table.querySelectorAll('tbody tr:not(#closedNoResultsRow)'))
+                .filter(tr => !tr.hasAttribute('data-filtered-out'));
+
+            trs.forEach(tr => {
+                let row = [];
+                const tds = tr.querySelectorAll('td');
+                tds.forEach(td => {
+                    let data = td.innerText.replace(/(\r\n|\n|\r)/gm, " ").replace(/\s+/g, " ").trim();
+                    data = data.replace(/"/g, '""');
+                    row.push('"' + data + '"');
+                });
+                csv.push(row.join(","));
+            });
+
+            const csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
+            const downloadLink = document.createElement("a");
+            downloadLink.download = filename + ".csv";
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+
+        // Open Contestation Modal & Live File Preview
+        let contestationModalInstance = null;
+        let currentPreviewObjectUrl = null;
+
+        function openContestationModal(hfCode, hfName) {
+            document.getElementById('contestationForm').reset();
+            clearUploadedFile();
+            document.getElementById('contestFacilityInfo').value = `${hfCode} - ${hfName}`;
+            
+            const modalEl = document.getElementById('contestationModal');
+            contestationModalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+            contestationModalInstance.show();
+        }
+
+        function previewUploadedFile(event) {
+            const file = event.target.files[0];
+            const container = document.getElementById('filePreviewContainer');
+            const content = document.getElementById('filePreviewContent');
+            const nameLabel = document.getElementById('previewFileName');
+
+            if (currentPreviewObjectUrl) {
+                URL.revokeObjectURL(currentPreviewObjectUrl);
+                currentPreviewObjectUrl = null;
+            }
+
+            if (!file) {
+                container.classList.add('d-none');
+                content.innerHTML = '';
+                return;
+            }
+
+            const fileSizeKB = (file.size / 1024).toFixed(1);
+            nameLabel.textContent = `${file.name} (${fileSizeKB} KB)`;
+            container.classList.remove('d-none');
+
+            currentPreviewObjectUrl = URL.createObjectURL(file);
+
+            if (file.type.startsWith('image/')) {
+                content.innerHTML = `<img src="${currentPreviewObjectUrl}" alt="Uploaded Evidence Preview">`;
+            } else if (file.type === 'application/pdf') {
+                content.innerHTML = `<iframe src="${currentPreviewObjectUrl}" title="PDF Preview"></iframe>`;
+            } else {
+                content.innerHTML = `
+                    <div class="py-3 text-muted">
+                        <i class="fa-solid fa-file-lines fa-2x text-primary mb-2"></i>
+                        <div class="small fw-semibold">Document ready for upload</div>
+                        <a href="${currentPreviewObjectUrl}" target="_blank" class="btn btn-outline-primary btn-sm mt-2">
+                            <i class="fa-solid fa-eye me-1"></i> Open File
+                        </a>
+                    </div>
+                `;
+            }
+        }
+
+        function clearUploadedFile() {
+            const fileInput = document.getElementById('contestEvidenceFile');
+            const container = document.getElementById('filePreviewContainer');
+            const content = document.getElementById('filePreviewContent');
+
+            if (currentPreviewObjectUrl) {
+                URL.revokeObjectURL(currentPreviewObjectUrl);
+                currentPreviewObjectUrl = null;
+            }
+
+            if (fileInput) fileInput.value = '';
+            if (container) container.classList.add('d-none');
+            if (content) content.innerHTML = '';
+        }
+
+        function submitContestation(event) {
+            event.preventDefault();
+            const facility = document.getElementById('contestFacilityInfo').value;
+            const reason = document.getElementById('contestReason').value;
+            const fileInput = document.getElementById('contestEvidenceFile');
+            const fileName = fileInput.files.length > 0 ? fileInput.files[0].name : '';
+
+            if (contestationModalInstance) {
+                contestationModalInstance.hide();
+            }
+
+            const msgBox = document.createElement('div');
+            msgBox.className = 'alert alert-success position-fixed bottom-0 end-0 m-3 shadow-sm';
+            msgBox.style.zIndex = '1060';
+            msgBox.innerHTML = `<i class="fa-solid fa-circle-check me-2"></i> Contestation submitted for <strong>${facility}</strong> (Reason: ${reason}, File: ${fileName}).`;
+            document.body.appendChild(msgBox);
+            setTimeout(() => msgBox.remove(), 4000);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPagination('closedTable');
+            renderPagination('openTable');
+        });
+    </script>
+</body>
+</html>

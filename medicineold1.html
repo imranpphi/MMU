@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Essential Medicines Knock-Out & Compliance Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f3f5f9; color: #1e293b; }
+    .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .sticky-col-1 { position: sticky; left: 0; z-index: 10; background: inherit; }
+    .sticky-col-2 { position: sticky; left: 95px; z-index: 10; background: inherit; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-rose-600 flex items-center justify-center font-bold text-lg shadow">
+          +
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight leading-tight">Essential Medicines Monitoring & Compliance</h1>
+          <p class="text-xs text-slate-400">Stratified Regional Sample (50 Health Facilities across 6 Regions)</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button onclick="exportComplianceCSV()" class="px-3 py-1.5 text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Export Updated CSV
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- KPI Cards -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Sampled Facilities</span>
+          <span class="p-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold">6 Regions</span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="kpi-total-facilities" class="text-2xl font-bold text-slate-800">50</span>
+          <span class="text-xs text-slate-500">records loaded</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Open Knock-Outs (✖)</span>
+          <span class="p-1.5 bg-rose-50 text-rose-600 rounded-lg text-xs font-bold">Action Needed</span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="kpi-open-knockouts" class="text-2xl font-bold text-rose-600">0</span>
+          <span id="kpi-affected-facilities" class="text-xs text-slate-500">across 0 facilities</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Contested / In Compliance</span>
+          <span class="p-1.5 bg-amber-50 text-amber-600 rounded-lg text-xs font-bold">Submitted</span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="kpi-contested-count" class="text-2xl font-bold text-amber-600">0</span>
+          <span class="text-xs text-slate-500">items routed to compliance</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Overall Compliance Rate</span>
+          <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold">Verified + Contested</span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="kpi-compliance-rate" class="text-2xl font-bold text-emerald-600">0%</span>
+          <span class="text-xs text-slate-500">applicable medicine checks</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Regional Summary Pills -->
+    <section class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Regional Distribution (50 Records)</h2>
+        <span class="text-xs text-slate-400">Click a region card to filter</span>
+      </div>
+      <div id="region-cards" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"></div>
+    </section>
+
+    <!-- View Tabs & Filters -->
+    <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="border-b border-slate-200 px-4 sm:px-6 pt-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <!-- Navigation Tabs -->
+        <div class="flex gap-6">
+          <button id="tab-btn-assessment" onclick="switchTab('assessment')" class="pb-3 text-sm font-semibold border-b-2 border-rose-600 text-rose-600 transition flex items-center gap-2">
+            <span>Facility Assessment Sheet</span>
+            <span class="px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-700">50</span>
+          </button>
+          <button id="tab-btn-compliance" onclick="switchTab('compliance')" class="pb-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition flex items-center gap-2">
+            <span>Compliance & Contestation Queue</span>
+            <span id="badge-compliance-count" class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800 font-bold">0</span>
+          </button>
+        </div>
+
+        <!-- Filters -->
+        <div id="assessment-filters" class="pb-3 flex flex-wrap items-center gap-2.5">
+          <input type="text" id="search-input" oninput="renderTable()" placeholder="Search facility, code, or district..." class="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500 w-56" />
+          
+          <select id="region-filter" onchange="renderTable()" class="px-3 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/30">
+            <option value="ALL">All Regions (6)</option>
+          </select>
+
+          <select id="status-filter" onchange="renderTable()" class="px-3 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/30">
+            <option value="ALL">All Facilities</option>
+            <option value="KNOCKOUT">Has Open Knock-Outs (✖)</option>
+            <option value="CONTESTED">Has Contested Items</option>
+            <option value="COMPLIANT">100% Compliant</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- TAB 1: Facility Assessment Table -->
+      <div id="view-assessment" class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr id="table-header-row" class="bg-slate-50 text-slate-600 border-b border-slate-200 font-semibold">
+              <!-- Populated dynamically -->
+            </tr>
+          </thead>
+          <tbody id="table-body" class="divide-y divide-slate-200">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB 2: Compliance Provided / Contestation Queue -->
+      <div id="view-compliance" class="hidden p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 class="text-base font-bold text-slate-800">Submitted Parameter Contestations (Compliance Register)</h3>
+            <p class="text-xs text-slate-500 mt-0.5">All knocked-out parameters contested from the assessment sheet are routed here with supporting evidence and justification.</p>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-medium">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Pending Verification
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Compliance Accepted
+            </span>
+          </div>
+        </div>
+
+        <div id="compliance-empty-state" class="text-center py-14 border-2 border-dashed border-slate-200 rounded-xl">
+          <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3 text-xl font-bold">!</div>
+          <h4 class="text-sm font-semibold text-slate-700">No Contestations Submitted Yet</h4>
+          <p class="text-xs text-slate-500 max-w-md mx-auto mt-1">Click on any red <span class="text-rose-600 font-bold">✖</span> cell or the <span class="font-semibold text-slate-700">Contest</span> button in the Facility Assessment Sheet to submit a Parameter Knock-Out Contestation.</p>
+        </div>
+
+        <div id="compliance-table-wrapper" class="hidden overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-50 text-slate-600 border-b border-slate-200 font-semibold">
+              <tr>
+                <th class="py-3 px-4">Contestation ID</th>
+                <th class="py-3 px-4">Facility & Region</th>
+                <th class="py-3 px-4">Knocked-Out Medicine</th>
+                <th class="py-3 px-4">Primary Reason</th>
+                <th class="py-3 px-4">Contesting Officer</th>
+                <th class="py-3 px-4">Evidence & Remarks</th>
+                <th class="py-3 px-4">Compliance Status</th>
+                <th class="py-3 px-4 text-right">Review Action</th>
+              </tr>
+            </thead>
+            <tbody id="compliance-tbody" class="divide-y divide-slate-200 bg-white"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- PARAMETER KNOCK-OUT CONTESTATION MODAL (Matching Provided Template) -->
+  <div id="contestation-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden my-auto animate-fadeIn">
+      
+      <!-- Crimson Header -->
+      <div class="bg-[#be123c] px-6 py-4 flex items-start justify-between text-white">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center font-bold text-lg shrink-0">
+            !
+          </div>
+          <div>
+            <h2 class="text-base sm:text-lg font-bold leading-snug">Parameter Knock-Out Contestation</h2>
+            <p class="text-xs text-rose-100">Select a knocked-out item, give the reason & attach evidence</p>
+          </div>
+        </div>
+        <button onclick="closeModal()" class="text-white/80 hover:text-white p-1 rounded-lg transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <form id="contestation-form" onsubmit="submitContestation(event)" class="p-6 space-y-4 max-h-[82vh] overflow-y-auto custom-scrollbar">
+        
+        <!-- Facility & Parameter Summary Box -->
+        <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2.5 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500">Health Facility:</span>
+            <span id="modal-facility-name" class="font-bold text-slate-900 text-sm">B.H.U Dodo Detho (233007)</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500">Region / District:</span>
+            <span id="modal-region-district" class="font-semibold text-slate-800">Sukkur • Shikarpur</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500">Assessment Visit:</span>
+            <span id="modal-visit-date" class="font-medium text-slate-700">2026-10-22 11:07</span>
+          </div>
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-slate-500">Knocked-Out Parameter:</span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-rose-50 border border-rose-200 text-rose-700 font-semibold">
+              <span>✕</span> Essential Medicines Availability
+            </span>
+          </div>
+
+          <div class="pt-2">
+            <label class="block font-semibold text-slate-700 mb-1.5">Knocked-Out Sub-Parameter(s) (Select item to contest):</label>
+            <select id="modal-subparam-select" required onchange="handleSubParamChange()" class="w-full px-3 py-2.5 text-xs font-medium rounded-lg border-2 border-rose-300 bg-white text-slate-800 focus:outline-none focus:border-rose-500">
+              <option value="">-- Select knocked-out sub-parameter --</option>
+            </select>
+            <p id="modal-remaining-count" class="text-[11px] text-slate-500 mt-1.5">0 of 0 knocked-out items left to contest</p>
+          </div>
+        </div>
+
+        <!-- Primary Reason -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Primary Reason for Contestation <span class="text-rose-600">*</span></label>
+          <select id="modal-reason-select" required class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600">
+            <option value="">-- Select a sub-parameter first --</option>
+          </select>
+        </div>
+
+        <!-- Officer Name & Designation -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Contesting Officer Name <span class="text-rose-600">*</span></label>
+            <input type="text" id="modal-officer-name" required placeholder="e.g. Dr. Ahmed Ali" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Designation / Role <span class="text-rose-600">*</span></label>
+            <input type="text" id="modal-officer-role" required placeholder="e.g. WMO / Facility In-charge" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600" />
+          </div>
+        </div>
+
+        <!-- Evidence Reference -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Evidence / Stock Register / Photo Reference</label>
+          <input type="text" id="modal-evidence-ref" placeholder="e.g. Stock Reg Pg#42, Medicine Bin Card Oct-26, or Photo Link" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600" />
+        </div>
+
+        <!-- File Upload Box -->
+        <div>
+          <label for="modal-file-input" class="flex items-center gap-3 p-3.5 border-2 border-dashed border-slate-300 hover:border-teal-500 rounded-xl cursor-pointer transition bg-slate-50/50">
+            <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+            <div class="text-xs">
+              <span class="font-semibold text-slate-700">Attach evidence file(s)</span>
+              <span class="text-slate-500"> — photo, PDF or document • max 5 files, 8 MB each</span>
+              <div id="modal-file-list" class="text-teal-700 font-medium mt-0.5"></div>
+            </div>
+          </label>
+          <input type="file" id="modal-file-input" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" onchange="handleFileSelect(event)" class="hidden" />
+        </div>
+
+        <!-- Detailed Justification -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Detailed Justification & Remarks <span class="text-rose-600">*</span></label>
+          <textarea id="modal-remarks" rows="3" required placeholder="Provide factual details supporting why this parameter should be reconsidered..." class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600"></textarea>
+        </div>
+
+        <!-- Footer Buttons -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-[#0f766e] hover:bg-[#115e59] rounded-lg shadow-sm transition">
+            Save Contestation
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden items-center gap-2.5 bg-slate-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-lg border border-slate-700">
+    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+    <span id="toast-msg">Contestation saved and routed to Compliance!</span>
+  </div>
+
+  <script>
+    // 1. Exact 22 Essential Medicine Sub-Parameters from Justification Sheet - Medicine.xlsx
+    const MEDICINE_PARAMS = [
+      { key: "m1", short: "Cap. Amoxicillin", full: "Cap. Amoxicillin/Ampicillin" },
+      { key: "m2", short: "Amoxicillin DT/Syp", full: "Amoxicillin DT / Syrup Amoxicillin" },
+      { key: "m3", short: "Tab. Erythromycin/Aug", full: "Tablet Erythromycin/Amoxicillin+Clavulanic Acid" },
+      { key: "m4", short: "Syp. Erythromycin/Clar", full: "Syrup Erythromycin/Clarithromycin/Amoxicillin+Clavulanic Acid" },
+      { key: "m5", short: "Tab. Metronidazole", full: "Tablet Metronidazole" },
+      { key: "m6", short: "Inj. Ampicillin/Ceftriax", full: "Injection Ampicillin/Amoxicillin/Augmentin/Gentamicin/Ceftriaxone" },
+      { key: "m7", short: "Tab. Diclofenac/Para", full: "Tablet Diclofenac/Paracetamol/Ibuprofen/Mefenamic acid" },
+      { key: "m8", short: "Inj. Diclofenac/Para", full: "Injection Diclofenac/Paracetamol" },
+      { key: "m9", short: "Syp. Paracetamol/Ibu", full: "Syrup Paracetamol/Ibuprofen/Mefenamic acid" },
+      { key: "m10", short: "Tab. Chloroquine/AL", full: "Tablet Chloroquine/Artemether+Lumefantrine" },
+      { key: "m11", short: "Syp. Salbutamol", full: "Syrup Salbutamol" },
+      { key: "m12", short: "Antihelminthic", full: "Syrup/Tablet Antihelminthic (Albendazole/Mebendazole)" },
+      { key: "m13", short: "Antihistamine/CPM", full: "Syrup/Tablet Antihistamine/Chlorpheniramine maleate" },
+      { key: "m14", short: "IV Infusions/NS/RL", full: "IV Infusions/Dextrose infusion/Normal saline/Ringer lactate" },
+      { key: "m15", short: "Inj. Dexamethasone", full: "Injection Dexamethasone/Hydrocortisone" },
+      { key: "m16", short: "Iron / Folic Acid", full: "Tablet/Capsule Iron/Folic Acid" },
+      { key: "m17", short: "ORS", full: "ORS" },
+      { key: "m18", short: "Tab. Misoprostol", full: "Tablet Misoprostol" },
+      { key: "m19", short: "Inj. MgSO4", full: "Injection Magnesium Sulphate" },
+      { key: "m20", short: "Syrup / DT Zinc", full: "Syrup Zinc / Zinc DT / Zinc Tablets" },
+      { key: "m21", short: "Anti-snake Venom (ASV)", full: "Anti-snake Venom (ASV)" },
+      { key: "m22", short: "Anti-rabies Vaccine (ARV)", full: "Anti-rabies vaccine (ARV)" }
+    ];
+
+    // 2. Exact Contestation Reasons from Sheet5 of Justification Sheet - Medicine.xlsx
+    const CONTESTATION_REASONS = [
+      "Supplied / Restocked",
+      "Verified Available in stock / MMU-Miss reported",
+      "Not Supplied by Malaria Program",
+      "Facility not Managed by PPHI",
+      "Non-ASV Center",
+      "Non-ARV Center",
+      "Dispenser on Polio but All items were Available",
+      "Short at DO store",
+      "Stock will be supplied"
+    ];
+
+    // 3. Stratified 50 Real Facility Records across all 6 Regions (Mirpurkhas: 12, Sukkur: 10, Larkana: 10, SBA: 10, Karachi: 5, Hyderabad: 3)
+    const FACILITIES_DATA = [
+      // MIRPURKHAS (12 Records)
+      { code: "211051", region: "Mirpurkhas", district: "Badin - B", wStatus: "(6/6)", name: "BHU Ghulam Muhammad Nizamani", transitioned: "-", visitDate: "2026-10-16 09:26", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","-"] },
+      { code: "211056", region: "Mirpurkhas", district: "Badin - B", wStatus: "(24/7)", name: "BHU Rahuki", transitioned: "-", visitDate: "2026-10-09 10:22", statuses: ["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-"] },
+      { code: "211086", region: "Mirpurkhas", district: "Badin - A", wStatus: "(6/6)", name: "DCD Abdul Sattar Pirzada", transitioned: "-", visitDate: "2026-10-01 11:20", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"] },
+      { code: "211095", region: "Mirpurkhas", district: "Badin - B", wStatus: "(6/6)", name: "DCD Madina Farm", transitioned: "-", visitDate: "2026-10-10 08:56", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"] },
+      { code: "211101", region: "Mirpurkhas", district: "Badin - B", wStatus: "(6/6)", name: "ED Baran Laghari", transitioned: "-", visitDate: "2026-10-13 08:41", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"] },
+      { code: "211021", region: "Mirpurkhas", district: "Badin - A", wStatus: "(24/7 Plus)", name: "RHC Nindo Shahar", transitioned: "Existing (-)", visitDate: "2026-10-08 11:15", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔"] },
+      { code: "212014", region: "Mirpurkhas", district: "Mirpurkhas", wStatus: "(24/7)", name: "BHU Kot Ghulam Muhammad", transitioned: "-", visitDate: "2026-10-12 10:14", statuses: ["✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "212038", region: "Mirpurkhas", district: "Mirpurkhas", wStatus: "(6/6)", name: "BHU Jhilori", transitioned: "-", visitDate: "2026-10-14 09:45", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "212062", region: "Mirpurkhas", district: "Mirpurkhas", wStatus: "(6/6)", name: "GD Kangoro", transitioned: "-", visitDate: "2026-10-18 11:30", statuses: ["✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"] },
+      { code: "213019", region: "Mirpurkhas", district: "Tharparkar - A", wStatus: "(24/7)", name: "BHU Chelhar", transitioned: "-", visitDate: "2026-10-11 10:50", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","-"] },
+      { code: "213044", region: "Mirpurkhas", district: "Tharparkar - B", wStatus: "(6/6)", name: "BHU Kantio", transitioned: "-", visitDate: "2026-10-15 12:05", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "214012", region: "Mirpurkhas", district: "Umerkot", wStatus: "(24/7)", name: "BHU Sufi Faqeer", transitioned: "-", visitDate: "2026-10-19 09:38", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✖"] },
+
+      // SUKKUR (10 Records)
+      { code: "233007", region: "Sukkur", district: "Shikarpur", wStatus: "(24/7)", name: "B.H.U Dodo Detho", transitioned: "-", visitDate: "2026-10-22 11:07", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","-"] },
+      { code: "231015", region: "Sukkur", district: "Sukkur", wStatus: "(24/7)", name: "BHU Ali Wahan", transitioned: "-", visitDate: "2026-10-06 10:15", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "231029", region: "Sukkur", district: "Sukkur", wStatus: "(6/6)", name: "BHU Kandhra", transitioned: "-", visitDate: "2026-10-09 11:42", statuses: ["✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "232011", region: "Sukkur", district: "Ghotki", wStatus: "(24/7 Plus)", name: "RHC Adilpur", transitioned: "Existing (-)", visitDate: "2026-10-13 12:18", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖"] },
+      { code: "232034", region: "Sukkur", district: "Ghotki", wStatus: "(24/7)", name: "BHU Sarhad", transitioned: "-", visitDate: "2026-10-17 09:52", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "233024", region: "Sukkur", district: "Shikarpur", wStatus: "(6/6)", name: "BHU Jagan", transitioned: "-", visitDate: "2026-10-14 10:28", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","-","-"] },
+      { code: "234008", region: "Sukkur", district: "Khairpur - A", wStatus: "(24/7)", name: "BHU Babarloi", transitioned: "-", visitDate: "2026-10-08 09:11", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "234052", region: "Sukkur", district: "Khairpur - B", wStatus: "(24/7)", name: "BHU Sobhodero", transitioned: "-", visitDate: "2026-10-20 11:55", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","-","-"] },
+      { code: "234071", region: "Sukkur", district: "Khairpur - B", wStatus: "(6/6)", name: "GD Hingorja", transitioned: "-", visitDate: "2026-10-21 10:04", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"] },
+      { code: "231042", region: "Sukkur", district: "Sukkur", wStatus: "(6/6)", name: "MCH Center Rohri", transitioned: "-", visitDate: "2026-10-15 12:30", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"] },
+
+      // LARKANA (10 Records)
+      { code: "221009", region: "Larkana", district: "Larkana", wStatus: "(24/7)", name: "BHU Arija", transitioned: "-", visitDate: "2026-10-07 10:40", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "221023", region: "Larkana", district: "Larkana", wStatus: "(24/7)", name: "BHU Mahota", transitioned: "-", visitDate: "2026-10-11 09:20", statuses: ["✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "222014", region: "Larkana", district: "Kamber Shahdadkot", wStatus: "(24/7)", name: "BHU Behram", transitioned: "-", visitDate: "2026-10-12 11:05", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","-"] },
+      { code: "222031", region: "Larkana", district: "Kamber Shahdadkot", wStatus: "(6/6)", name: "BHU Ghaibi Dero", transitioned: "-", visitDate: "2026-10-16 10:12", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "223006", region: "Larkana", district: "Jacobabad", wStatus: "(24/7)", name: "BHU Mauladad", transitioned: "-", visitDate: "2026-10-09 12:19", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "223022", region: "Larkana", district: "Jacobabad", wStatus: "(6/6)", name: "BHU Dilmurad", transitioned: "-", visitDate: "2026-10-18 09:47", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "224011", region: "Larkana", district: "Kashmore", wStatus: "(24/7 Plus)", name: "RHC Tangwani", transitioned: "Existing (-)", visitDate: "2026-10-14 11:33", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖"] },
+      { code: "224027", region: "Larkana", district: "Kashmore", wStatus: "(24/7)", name: "BHU Bakhshapur", transitioned: "-", visitDate: "2026-10-19 10:50", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "225005", region: "Larkana", district: "Dadu", wStatus: "(24/7)", name: "BHU Phulji Station", transitioned: "-", visitDate: "2026-10-10 09:15", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "225038", region: "Larkana", district: "Dadu", wStatus: "(6/6)", name: "BHU Sita Road", transitioned: "-", visitDate: "2026-10-21 12:02", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+
+      // SBA - SHAHEED BENAZIRABAD (10 Records)
+      { code: "241008", region: "SBA", district: "Shaheed Benazirabad", wStatus: "(24/7)", name: "BHU Bucheri", transitioned: "-", visitDate: "2026-10-05 10:10", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "241021", region: "SBA", district: "Shaheed Benazirabad", wStatus: "(24/7)", name: "BHU Jam Sahib", transitioned: "-", visitDate: "2026-10-12 09:34", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","-","-"] },
+      { code: "241039", region: "SBA", district: "Shaheed Benazirabad", wStatus: "(6/6)", name: "GD Qazi Ahmed", transitioned: "-", visitDate: "2026-10-16 11:22", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"] },
+      { code: "242012", region: "SBA", district: "Sanghar", wStatus: "(24/7 Plus)", name: "RHC Perumal", transitioned: "Existing (-)", visitDate: "2026-10-09 10:48", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔"] },
+      { code: "242029", region: "SBA", district: "Sanghar", wStatus: "(24/7)", name: "BHU Berani", transitioned: "-", visitDate: "2026-10-14 09:05", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "242045", region: "SBA", district: "Sanghar", wStatus: "(6/6)", name: "BHU Chotiaryoon", transitioned: "-", visitDate: "2026-10-19 11:40", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "243007", region: "SBA", district: "Naushahro Feroze", wStatus: "(24/7)", name: "BHU Darbelo", transitioned: "-", visitDate: "2026-10-08 12:15", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "243018", region: "SBA", district: "Naushahro Feroze", wStatus: "(24/7)", name: "BHU Padidan", transitioned: "-", visitDate: "2026-10-13 10:29", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "243033", region: "SBA", district: "Naushahro Feroze", wStatus: "(6/6)", name: "BHU Halani", transitioned: "-", visitDate: "2026-10-17 09:50", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "241047", region: "SBA", district: "Shaheed Benazirabad", wStatus: "(6/6)", name: "BHU Daur", transitioned: "-", visitDate: "2026-10-20 10:18", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+
+      // KARACHI (5 Records)
+      { code: "251004", region: "Karachi", district: "Malir", wStatus: "(24/7)", name: "BHU Memon Goth", transitioned: "-", visitDate: "2026-10-07 11:10", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔"] },
+      { code: "251012", region: "Karachi", district: "Malir", wStatus: "(6/6)", name: "BHU Ibrahim Hyderi", transitioned: "-", visitDate: "2026-10-11 10:35", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "252006", region: "Karachi", district: "West", wStatus: "(24/7)", name: "BHU Manghopir", transitioned: "-", visitDate: "2026-10-15 12:00", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","✖"] },
+      { code: "253009", region: "Karachi", district: "Keamari", wStatus: "(6/6)", name: "GD Mauripur", transitioned: "-", visitDate: "2026-10-18 09:42", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"] },
+      { code: "254003", region: "Karachi", district: "Korangi", wStatus: "(6/6)", name: "MCH Center Landhi", transitioned: "-", visitDate: "2026-10-21 11:25", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"] },
+
+      // HYDERABAD (3 Records)
+      { code: "261007", region: "Hyderabad", district: "Hyderabad", wStatus: "(24/7)", name: "BHU Tando Jam", transitioned: "-", visitDate: "2026-10-10 10:15", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] },
+      { code: "262011", region: "Hyderabad", district: "Thatta", wStatus: "(24/7 Plus)", name: "RHC Mirpur Sakro", transitioned: "Existing (-)", visitDate: "2026-10-14 11:48", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔"] },
+      { code: "263005", region: "Hyderabad", district: "Jamshoro", wStatus: "(24/7)", name: "BHU Sehwan", transitioned: "-", visitDate: "2026-10-19 09:30", statuses: ["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"] }
+    ];
+
+    // Application State
+    let contestations = []; // Stores submitted contestations routed to Compliance
+    let activeFacilityCode = null;
+    let selectedFiles = [];
+
+    // Initialize Dashboard
+    function init() {
+      populateRegionFilter();
+      renderHeader();
+      renderRegionCards();
+      renderTable();
+      updateKPIs();
+    }
+
+    function populateRegionFilter() {
+      const regions = [...new Set(FACILITIES_DATA.map(f => f.region))];
+      const select = document.getElementById("region-filter");
+      regions.forEach(reg => {
+        const count = FACILITIES_DATA.filter(f => f.region === reg).length;
+        const opt = document.createElement("option");
+        opt.value = reg;
+        opt.textContent = `${reg} (${count})`;
+        select.appendChild(opt);
+      });
+    }
+
+    function renderRegionCards() {
+      const regions = ["Mirpurkhas", "Sukkur", "Larkana", "SBA", "Karachi", "Hyderabad"];
+      const container = document.getElementById("region-cards");
+      const currentFilter = document.getElementById("region-filter").value;
+
+      container.innerHTML = regions.map(reg => {
+        const recs = FACILITIES_DATA.filter(f => f.region === reg);
+        let openKO = 0;
+        let contested = 0;
+        recs.forEach(f => {
+          f.statuses.forEach((st, idx) => {
+            if (st === "✖") {
+              const isContested = contestations.some(c => c.facilityCode === f.code && c.paramIndex === idx);
+              if (isContested) contested++;
+              else openKO++;
+            }
+          });
+        });
+
+        const isSelected = currentFilter === reg;
+        return `
+          <button onclick="toggleRegionFilter('${reg}')" class="text-left p-3 rounded-xl border transition ${isSelected ? 'border-rose-500 bg-rose-50/60 ring-1 ring-rose-500' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'}">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-xs text-slate-800">${reg}</span>
+              <span class="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-600">${recs.length} recs</span>
+            </div>
+            <div class="mt-2 flex items-center gap-2 text-[11px]">
+              <span class="text-rose-600 font-semibold">${openKO} Open ✖</span>
+              <span class="text-slate-300">|</span>
+              <span class="text-amber-600 font-semibold">${contested} Contested</span>
+            </div>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function toggleRegionFilter(reg) {
+      const select = document.getElementById("region-filter");
+      select.value = (select.value === reg) ? "ALL" : reg;
+      renderRegionCards();
+      renderTable();
+    }
+
+    function renderHeader() {
+      const tr = document.getElementById("table-header-row");
+      let html = `
+        <th class="py-3 px-3 sticky-col-1 bg-slate-50 border-r border-slate-200 min-w-[95px]">Code</th>
+        <th class="py-3 px-3 sticky-col-2 bg-slate-50 border-r border-slate-200 min-w-[190px]">Health Facility</th>
+        <th class="py-3 px-3 min-w-[110px]">Region</th>
+        <th class="py-3 px-3 min-w-[125px]">District</th>
+        <th class="py-3 px-3 min-w-[85px]">W.Status</th>
+        <th class="py-3 px-3 min-w-[125px]">Visit Date</th>
+        <th class="py-3 px-3 min-w-[120px] text-center">Contestation</th>
+      `;
+      MEDICINE_PARAMS.forEach((m, i) => {
+        html += `<th class="py-2.5 px-2 text-center min-w-[88px] border-l border-slate-200/70" title="${m.full}">
+          <div class="text-[10px] text-slate-400 font-normal">Item ${i + 1}</div>
+          <div class="leading-tight line-clamp-2">${m.short}</div>
+        </th>`;
+      });
+      tr.innerHTML = html;
+    }
+
+    function renderTable() {
+      const search = document.getElementById("search-input").value.toLowerCase().trim();
+      const regionFilter = document.getElementById("region-filter").value;
+      const statusFilter = document.getElementById("status-filter").value;
+      const tbody = document.getElementById("table-body");
+
+      const filtered = FACILITIES_DATA.filter(f => {
+        if (regionFilter !== "ALL" && f.region !== regionFilter) return false;
+        if (search && !(
+          f.name.toLowerCase().includes(search) ||
+          f.code.toLowerCase().includes(search) ||
+          f.district.toLowerCase().includes(search)
+        )) return false;
+
+        const openCount = f.statuses.filter((st, idx) => st === "✖" && !contestations.some(c => c.facilityCode === f.code && c.paramIndex === idx)).length;
+        const contestedCount = contestations.filter(c => c.facilityCode === f.code).length;
+
+        if (statusFilter === "KNOCKOUT" && openCount === 0) return false;
+        if (statusFilter === "CONTESTED" && contestedCount === 0) return false;
+        if (statusFilter === "COMPLIANT" && (openCount > 0 || contestedCount > 0)) return false;
+
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${7 + MEDICINE_PARAMS.length}" class="py-10 text-center text-slate-500 text-sm">No matching facility records found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(f => {
+        const openIndices = [];
+        const contestedItems = contestations.filter(c => c.facilityCode === f.code);
+        f.statuses.forEach((st, idx) => {
+          if (st === "✖" && !contestedItems.some(c => c.paramIndex === idx)) {
+            openIndices.push(idx);
+          }
+        });
+
+        let actionCell = "";
+        if (openIndices.length > 0) {
+          actionCell = `
+            <button onclick="openContestationModal('${f.code}', ${openIndices[0]})" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[11px] shadow-xs transition inline-flex items-center gap-1">
+              <span>Contest (${openIndices.length})</span>
+            </button>
+          `;
+        } else if (contestedItems.length > 0) {
+          actionCell = `
+            <button onclick="switchTab('compliance')" class="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 font-semibold text-[11px] transition">
+              In Compliance (${contestedItems.length})
+            </button>
+          `;
+        } else {
+          actionCell = `<span class="text-[11px] font-medium text-emerald-600">✓ Compliant</span>`;
+        }
+
+        const paramCells = f.statuses.map((st, idx) => {
+          const existingContestation = contestations.find(c => c.facilityCode === f.code && c.paramIndex === idx);
+          if (existingContestation) {
+            const isAccepted = existingContestation.complianceStatus === "Compliance Accepted";
+            return `
+              <td onclick="switchTab('compliance')" title="Contested: ${existingContestation.reason} (Click to view in Compliance)" class="py-2 px-2 text-center border-l border-slate-100 cursor-pointer ${isAccepted ? 'bg-emerald-50/70' : 'bg-amber-50/80'}">
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${isAccepted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-200/80 text-amber-900'}">
+                  ${isAccepted ? '✔ Comp' : '⏳ Contested'}
+                </span>
+              </td>
+            `;
+          }
+          if (st === "✔") {
+            return `<td class="py-2 px-2 text-center border-l border-slate-100 text-emerald-600 font-bold">✔</td>`;
+          }
+          if (st === "✖") {
+            return `
+              <td onclick="openContestationModal('${f.code}', ${idx})" title="Click to Contest Knocked-Out Parameter: ${MEDICINE_PARAMS[idx].full}" class="py-2 px-2 text-center border-l border-slate-100 bg-rose-50/60 hover:bg-rose-100 cursor-pointer transition">
+                <span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-rose-100 text-rose-700 font-bold">✖</span>
+              </td>
+            `;
+          }
+          return `<td class="py-2 px-2 text-center border-l border-slate-100 text-slate-400">-</td>`;
+        }).join("");
+
+        return `
+          <tr class="bg-white hover:bg-slate-50/90 transition">
+            <td class="py-2.5 px-3 sticky-col-1 bg-white border-r border-slate-200 font-mono font-semibold text-slate-700">${f.code}</td>
+            <td class="py-2.5 px-3 sticky-col-2 bg-white border-r border-slate-200 font-semibold text-slate-900">${f.name}</td>
+            <td class="py-2.5 px-3 font-medium text-slate-700">${f.region}</td>
+            <td class="py-2.5 px-3 text-slate-600">${f.district}</td>
+            <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">${f.wStatus}</span></td>
+            <td class="py-2.5 px-3 text-slate-500 whitespace-nowrap">${f.visitDate}</td>
+            <td class="py-2.5 px-3 text-center">${actionCell}</td>
+            ${paramCells}
+          </tr>
+        `;
+      }).join("");
+    }
+
+    // Modal Controls
+    function openContestationModal(facilityCode, preselectParamIdx = null) {
+      const facility = FACILITIES_DATA.find(f => f.code === facilityCode);
+      if (!facility) return;
+
+      activeFacilityCode = facilityCode;
+      selectedFiles = [];
+      document.getElementById("contestation-form").reset();
+      document.getElementById("modal-file-list").textContent = "";
+
+      document.getElementById("modal-facility-name").textContent = `${facility.name} (${facility.code})`;
+      document.getElementById("modal-region-district").textContent = `${facility.region} • ${facility.district}`;
+      document.getElementById("modal-visit-date").textContent = facility.visitDate;
+
+      // Find all knocked-out items for this facility
+      const totalKO = facility.statuses.filter(s => s === "✖").length;
+      const uncontestedKO = [];
+      facility.statuses.forEach((st, idx) => {
+        if (st === "✖" && !contestations.some(c => c.facilityCode === facility.code && c.paramIndex === idx)) {
+          uncontestedKO.push({ idx, param: MEDICINE_PARAMS[idx] });
+        }
+      });
+
+      const subSelect = document.getElementById("modal-subparam-select");
+      subSelect.innerHTML = `<option value="">-- Select knocked-out sub-parameter --</option>` +
+        uncontestedKO.map(item => `<option value="${item.idx}">${item.param.full}</option>`).join("");
+
+      document.getElementById("modal-remaining-count").textContent =
+        `${uncontestedKO.length} of ${totalKO} knocked-out items left to contest`;
+
+      if (preselectParamIdx !== null && uncontestedKO.some(i => i.idx === preselectParamIdx)) {
+        subSelect.value = String(preselectParamIdx);
+      } else if (uncontestedKO.length === 1) {
+        subSelect.value = String(uncontestedKO[0].idx);
+      }
+
+      handleSubParamChange();
+
+      const modal = document.getElementById("contestation-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function handleSubParamChange() {
+      const subVal = document.getElementById("modal-subparam-select").value;
+      const reasonSelect = document.getElementById("modal-reason-select");
+      if (subVal === "") {
+        reasonSelect.innerHTML = `<option value="">-- Select a sub-parameter first --</option>`;
+        return;
+      }
+      reasonSelect.innerHTML = `<option value="">-- Select primary reason --</option>` +
+        CONTESTATION_REASONS.map(r => `<option value="${r}">${r}</option>`).join("");
+    }
+
+    function handleFileSelect(event) {
+      const files = Array.from(event.target.files).slice(0, 5);
+      selectedFiles = files.map(f => f.name);
+      document.getElementById("modal-file-list").textContent =
+        selectedFiles.length ? `Selected (${selectedFiles.length}): ${selectedFiles.join(", ")}` : "";
+    }
+
+    function closeModal() {
+      const modal = document.getElementById("contestation-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+      activeFacilityCode = null;
+    }
+
+    // Save Contestation -> Routes directly to Compliance View
+    function submitContestation(event) {
+      event.preventDefault();
+      if (!activeFacilityCode) return;
+
+      const facility = FACILITIES_DATA.find(f => f.code === activeFacilityCode);
+      const paramIndex = parseInt(document.getElementById("modal-subparam-select").value, 10);
+      const reason = document.getElementById("modal-reason-select").value;
+      const officerName = document.getElementById("modal-officer-name").value.trim();
+      const officerRole = document.getElementById("modal-officer-role").value.trim();
+      const evidenceRef = document.getElementById("modal-evidence-ref").value.trim();
+      const remarks = document.getElementById("modal-remarks").value.trim();
+
+      const newEntry = {
+        id: "CNT-" + String(1001 + contestations.length),
+        facilityCode: facility.code,
+        facilityName: facility.name,
+        region: facility.region,
+        district: facility.district,
+        visitDate: facility.visitDate,
+        paramIndex,
+        medicineName: MEDICINE_PARAMS[paramIndex].full,
+        reason,
+        officerName,
+        officerRole,
+        evidenceRef: evidenceRef || "Not specified",
+        attachedFiles: [...selectedFiles],
+        remarks,
+        submittedAt: new Date().toLocaleString(),
+        complianceStatus: "Compliance Provided (Pending Review)"
+      };
+
+      contestations.unshift(newEntry);
+      closeModal();
+      renderRegionCards();
+      renderTable();
+      renderComplianceTable();
+      updateKPIs();
+      showToast(`Contestation ${newEntry.id} saved & routed to Compliance!`);
+    }
+
+    function renderComplianceTable() {
+      const emptyState = document.getElementById("compliance-empty-state");
+      const tableWrapper = document.getElementById("compliance-table-wrapper");
+      const tbody = document.getElementById("compliance-tbody");
+      document.getElementById("badge-compliance-count").textContent = contestations.length;
+
+      if (contestations.length === 0) {
+        emptyState.classList.remove("hidden");
+        tableWrapper.classList.add("hidden");
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+      tableWrapper.classList.remove("hidden");
+
+      tbody.innerHTML = contestations.map((c, index) => {
+        const isAccepted = c.complianceStatus === "Compliance Accepted";
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="py-3.5 px-4 font-mono font-bold text-slate-800">${c.id}</td>
+            <td class="py-3.5 px-4">
+              <div class="font-bold text-slate-900">${c.facilityName} (${c.facilityCode})</div>
+              <div class="text-[11px] text-slate-500">${c.region} • ${c.district}</div>
+            </td>
+            <td class="py-3.5 px-4">
+              <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-rose-50 text-rose-700 font-semibold border border-rose-200">
+                ${c.medicineName}
+              </span>
+            </td>
+            <td class="py-3.5 px-4 font-medium text-slate-800">${c.reason}</td>
+            <td class="py-3.5 px-4">
+              <div class="font-semibold text-slate-800">${c.officerName}</div>
+              <div class="text-[11px] text-slate-500">${c.officerRole}</div>
+            </td>
+            <td class="py-3.5 px-4 max-w-xs">
+              <div class="text-slate-700">${c.remarks}</div>
+              <div class="text-[11px] text-teal-700 font-medium mt-1">Ref: ${c.evidenceRef}</div>
+              ${c.attachedFiles.length ? `<div class="text-[11px] text-slate-500 mt-0.5">📎 ${c.attachedFiles.join(", ")}</div>` : ""}
+            </td>
+            <td class="py-3.5 px-4">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${isAccepted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                ${c.complianceStatus}
+              </span>
+              <div class="text-[10px] text-slate-400 mt-1">${c.submittedAt}</div>
+            </td>
+            <td class="py-3.5 px-4 text-right">
+              ${!isAccepted ? `
+                <button onclick="approveCompliance(${index})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] transition">
+                  Verify & Accept
+                </button>
+              ` : `<span class="text-emerald-600 font-bold text-[11px]">✓ Verified</span>`}
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function approveCompliance(index) {
+      contestations[index].complianceStatus = "Compliance Accepted";
+      renderComplianceTable();
+      renderTable();
+      updateKPIs();
+      showToast(`${contestations[index].id} marked as Compliance Accepted.`);
+    }
+
+    function updateKPIs() {
+      let totalApplicable = 0;
+      let compliantOrContested = 0;
+      let openKnockOuts = 0;
+      let affectedFacilitiesSet = new Set();
+
+      FACILITIES_DATA.forEach(f => {
+        f.statuses.forEach((st, idx) => {
+          if (st === "✔") {
+            totalApplicable++;
+            compliantOrContested++;
+          } else if (st === "✖") {
+            totalApplicable++;
+            const isContested = contestations.some(c => c.facilityCode === f.code && c.paramIndex === idx);
+            if (isContested) {
+              compliantOrContested++;
+            } else {
+              openKnockOuts++;
+              affectedFacilitiesSet.add(f.code);
+            }
+          }
+        });
+      });
+
+      const rate = totalApplicable ? ((compliantOrContested / totalApplicable) * 100).toFixed(1) : 100;
+      document.getElementById("kpi-total-facilities").textContent = FACILITIES_DATA.length;
+      document.getElementById("kpi-open-knockouts").textContent = openKnockOuts;
+      document.getElementById("kpi-affected-facilities").textContent = `across ${affectedFacilitiesSet.size} facilities`;
+      document.getElementById("kpi-contested-count").textContent = contestations.length;
+      document.getElementById("kpi-compliance-rate").textContent = `${rate}%`;
+    }
+
+    function switchTab(tab) {
+      const btnAss = document.getElementById("tab-btn-assessment");
+      const btnComp = document.getElementById("tab-btn-compliance");
+      const viewAss = document.getElementById("view-assessment");
+      const viewComp = document.getElementById("view-compliance");
+      const filters = document.getElementById("assessment-filters");
+
+      if (tab === "assessment") {
+        btnAss.className = "pb-3 text-sm font-semibold border-b-2 border-rose-600 text-rose-600 transition flex items-center gap-2";
+        btnComp.className = "pb-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition flex items-center gap-2";
+        viewAss.classList.remove("hidden");
+        viewComp.classList.add("hidden");
+        filters.classList.remove("hidden");
+      } else {
+        btnComp.className = "pb-3 text-sm font-semibold border-b-2 border-rose-600 text-rose-600 transition flex items-center gap-2";
+        btnAss.className = "pb-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition flex items-center gap-2";
+        viewComp.classList.remove("hidden");
+        viewAss.classList.add("hidden");
+        filters.classList.add("hidden");
+        renderComplianceTable();
+      }
+    }
+
+    function exportComplianceCSV() {
+      const headers = ["Facility Code", "Region", "District", "W.Status", "Facility Name", "Visit Date"];
+      MEDICINE_PARAMS.forEach(m => {
+        headers.push(m.full, "Reason / Compliance Status");
+      });
+
+      const rows = FACILITIES_DATA.map(f => {
+        const row = [f.code, f.region, f.district, f.wStatus, `"${f.name}"`, f.visitDate];
+        f.statuses.forEach((st, idx) => {
+          const cont = contestations.find(c => c.facilityCode === f.code && c.paramIndex === idx);
+          if (cont) {
+            row.push("Contested", `"${cont.reason} | Officer: ${cont.officerName} (${cont.officerRole}) | Ref: ${cont.evidenceRef} | Remarks: ${cont.remarks}"`);
+          } else {
+            row.push(st, "");
+          }
+        });
+        return row.join(",");
+      });
+
+      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "Medicine_Compliance_Updated_50_Records.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toast-msg").textContent = msg;
+      toast.classList.remove("hidden");
+      toast.classList.add("flex");
+      setTimeout(() => {
+        toast.classList.add("hidden");
+        toast.classList.remove("flex");
+      }, 3500);
+    }
+
+    // Boot
+    init();
+  </script>
+</body>
+</html>

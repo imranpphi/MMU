@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Essential Medicines Knock-Out & Compliance Analytics Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #0f172a; }
+    .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .sticky-col-1 { position: sticky; left: 0; z-index: 10; }
+    .sticky-col-2 { position: sticky; left: 88px; z-index: 10; }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+    .animate-modal { animation: fadeIn 0.16s ease-out forwards; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Header -->
+  <header class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-800 text-white shadow-lg sticky top-0 z-30 border-b border-slate-800">
+    <div class="max-w-[1680px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-rose-700 flex items-center justify-center font-extrabold text-xl shadow-md shadow-rose-950/50">
+          +
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight">Essential Medicines Knock-Out & Compliance Dashboard</h1>
+            <span class="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              Full Dataset • 255 Facilities
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">Complete Provincial Assessment • 6 Regions • 22 Essential Medicine Parameters</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <button onclick="resetFilters()" class="hidden sm:inline-flex px-3 py-1.5 text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg transition">
+          Reset Filters
+        </button>
+        <button onclick="exportComplianceCSV()" class="px-3.5 py-2 text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white rounded-lg shadow-sm transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Export Updated CSV
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-[1680px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- Executive KPI Strip -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Facilities</span>
+          <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">255</span>
+        </div>
+        <div class="mt-3">
+          <div id="kpi-total-facilities" class="text-2xl font-extrabold text-slate-900">255</div>
+          <p id="kpi-facility-split" class="text-xs text-slate-500 mt-0.5">208 (6/6) • 46 (24/7)</p>
+          <p id="kpi-transition-split" class="text-[11px] font-semibold text-indigo-600 mt-1">72 Newly Taken (1) • 183 Existing (-)</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Open Knock-Outs (✖)</span>
+          <span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-600 font-bold text-[11px]">Unresolved</span>
+        </div>
+        <div class="mt-3">
+          <div id="kpi-open-knockouts" class="text-2xl font-extrabold text-rose-600">744</div>
+          <p id="kpi-affected-facilities" class="text-xs text-slate-500 mt-0.5">across 0 facilities</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Contested Items</span>
+          <span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 font-bold text-[11px]">In Compliance</span>
+        </div>
+        <div class="mt-3">
+          <div id="kpi-contested-count" class="text-2xl font-extrabold text-amber-600">0</div>
+          <p id="kpi-verified-count" class="text-xs text-slate-500 mt-0.5">0 verified • 0 pending review</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Compliance Score</span>
+          <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[11px]">Live Rate</span>
+        </div>
+        <div class="mt-3">
+          <div id="kpi-compliance-rate" class="text-2xl font-extrabold text-emerald-600">0%</div>
+          <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
+            <div id="kpi-compliance-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Highest Knock-Out Item</span>
+          <span class="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-bold text-[11px]">Top Deficit</span>
+        </div>
+        <div class="mt-3">
+          <div id="kpi-top-medicine" class="text-sm font-bold text-slate-900 line-clamp-1">Tab. Chloroquine/AL</div>
+          <p id="kpi-top-medicine-count" class="text-xs text-rose-600 font-semibold mt-1">112 facilities missing</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Visual Analytics Charts Section -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <!-- Chart 1: Regional Compliance & Knock-Out Stacked Bar -->
+      <div class="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-800">Regional Knock-Out & Contestation Status</h2>
+            <p class="text-xs text-slate-500">Open Knock-Outs vs. Contested items across all 6 regions</p>
+          </div>
+        </div>
+        <div class="relative flex-1 min-h-[240px]">
+          <canvas id="chart-regions"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 2: Top 10 Most Knocked-Out Medicines -->
+      <div class="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-800">Top 10 Knocked-Out Medicines</h2>
+            <p class="text-xs text-slate-500">Parameters with highest missing counts (✖)</p>
+          </div>
+        </div>
+        <div class="relative flex-1 min-h-[240px]">
+          <canvas id="chart-medicines"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 3: Overall Parameter Status Doughnut -->
+      <div class="lg:col-span-3 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col">
+        <div class="mb-3">
+          <h2 class="text-sm font-bold text-slate-800">Parameter Breakdown</h2>
+          <p class="text-xs text-slate-500">All 5,610 medicine checks (255 × 22)</p>
+        </div>
+        <div class="relative flex-1 min-h-[240px] flex items-center justify-center">
+          <canvas id="chart-breakdown"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Regional Quick-Filter Cards -->
+    <section class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Regional Quick Filter (Click to isolate region)</h2>
+        <span id="active-filter-label" class="text-xs font-medium text-slate-400">Showing all 255 records</span>
+      </div>
+      <div id="region-cards" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"></div>
+    </section>
+
+    <!-- Main Data & Compliance Tabs Container -->
+    <section class="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+      <div class="border-b border-slate-200 px-4 sm:px-6 pt-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 bg-slate-50/40">
+        <!-- Navigation Tabs -->
+        <div class="flex gap-6">
+          <button id="tab-btn-assessment" onclick="switchTab('assessment')" class="pb-3.5 text-sm font-bold border-b-2 border-rose-600 text-rose-600 transition flex items-center gap-2">
+            <span>Facility Assessment Matrix</span>
+            <span id="badge-filtered-count" class="px-2 py-0.5 text-xs rounded-full bg-slate-200/80 text-slate-800">255</span>
+          </button>
+          <button id="tab-btn-compliance" onclick="switchTab('compliance')" class="pb-3.5 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-2">
+            <span>Compliance Provided & Contestations</span>
+            <span id="badge-compliance-count" class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800 font-extrabold">0</span>
+          </button>
+        </div>
+
+        <!-- Filters Toolbar -->
+        <div id="assessment-filters" class="pb-3.5 flex flex-wrap items-center gap-2">
+          <div class="relative">
+            <input type="text" id="search-input" oninput="handleFilterChange()" placeholder="Search facility, code, district..." class="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 w-56" />
+            <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+
+          <select id="region-filter" onchange="handleRegionDropdownChange()" class="px-2.5 py-1.5 text-xs font-medium border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-rose-500">
+            <option value="ALL">All Regions (255)</option>
+          </select>
+
+          <select id="district-filter" onchange="handleFilterChange()" class="px-2.5 py-1.5 text-xs font-medium border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-rose-500">
+            <option value="ALL">All Districts</option>
+          </select>
+
+          <select id="transition-filter" onchange="handleFilterChange()" class="px-2.5 py-1.5 text-xs font-medium border border-indigo-200 rounded-lg bg-indigo-50/40 text-slate-800 focus:outline-none focus:border-indigo-500">
+            <option value="ALL">All Facility Types (255)</option>
+            <option value="1">Newly Taken HF (1)</option>
+            <option value="-">Existing HF (-)</option>
+          </select>
+
+          <select id="wstatus-filter" onchange="handleFilterChange()" class="px-2.5 py-1.5 text-xs font-medium border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-rose-500">
+            <option value="ALL">All W.Status</option>
+            <option value="(6/6)">(6/6)</option>
+            <option value="(24/7)">(24/7)</option>
+          </select>
+
+          <select id="status-filter" onchange="handleFilterChange()" class="px-2.5 py-1.5 text-xs font-medium border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-rose-500">
+            <option value="ALL">All Compliance States</option>
+            <option value="KNOCKOUT">Has Open Knock-Outs (✖)</option>
+            <option value="CONTESTED">Has Contested Items</option>
+            <option value="COMPLIANT">100% Compliant (No ✖)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- TAB 1: Assessment Table + Pagination -->
+      <div id="view-assessment">
+        <div class="overflow-x-auto custom-scrollbar max-h-[620px]">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="sticky top-0 z-20 shadow-xs">
+              <tr id="table-header-row" class="bg-slate-100 text-slate-700 border-b border-slate-200 font-semibold">
+                <!-- Populated dynamically -->
+              </tr>
+            </thead>
+            <tbody id="table-body" class="divide-y divide-slate-200">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Footer -->
+        <div class="px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+          <div id="pagination-info">Showing 1 to 25 of 255 facilities</div>
+          <div class="flex items-center gap-2">
+            <label class="text-slate-500">Rows:</label>
+            <select id="page-size" onchange="changePageSize()" class="px-2 py-1 border border-slate-300 rounded bg-white text-xs">
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="255">All (255)</option>
+            </select>
+            <div class="flex items-center gap-1 ml-2">
+              <button id="btn-prev-page" onclick="prevPage()" class="px-2.5 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 font-medium">Prev</button>
+              <span id="page-indicator" class="px-2 font-semibold text-slate-800">Page 1 of 11</span>
+              <button id="btn-next-page" onclick="nextPage()" class="px-2.5 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 font-medium">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: Compliance Provided / Contestation Register -->
+      <div id="view-compliance" class="hidden p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Compliance Provided & Parameter Contestation Register</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Every knocked-out medicine contested from the Facility Assessment Matrix is logged here with officer details, evidence references, and compliance status.</p>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Compliance Provided (Pending)
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Compliance Verified
+            </span>
+          </div>
+        </div>
+
+        <div id="compliance-empty-state" class="text-center py-16 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/40">
+          <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3 text-xl font-extrabold">!</div>
+          <h4 class="text-sm font-bold text-slate-800">No Contestations Submitted Yet</h4>
+          <p class="text-xs text-slate-500 max-w-md mx-auto mt-1.5 leading-relaxed">
+            Click any red <span class="inline-block px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-bold">✖</span> cell or the <span class="font-semibold text-slate-700">Contest</span> button in the Facility Assessment Matrix to file a Parameter Knock-Out Contestation.
+          </p>
+        </div>
+
+        <div id="compliance-table-wrapper" class="hidden overflow-x-auto border border-slate-200 rounded-xl shadow-2xs">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-100 text-slate-700 border-b border-slate-200 font-semibold">
+              <tr>
+                <th class="py-3 px-4">ID</th>
+                <th class="py-3 px-4">Health Facility & Region</th>
+                <th class="py-3 px-4">Knocked-Out Parameter</th>
+                <th class="py-3 px-4">Primary Contestation Reason</th>
+                <th class="py-3 px-4">Contesting Officer</th>
+                <th class="py-3 px-4">Evidence & Justification</th>
+                <th class="py-3 px-4">Compliance Status</th>
+                <th class="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="compliance-tbody" class="divide-y divide-slate-200 bg-white"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- PARAMETER KNOCK-OUT CONTESTATION MODAL (Exact Template Design) -->
+  <div id="contestation-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/65 backdrop-blur-xs p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden my-auto animate-modal">
+      
+      <!-- Crimson Header -->
+      <div class="bg-[#be123c] px-6 py-4 flex items-start justify-between text-white">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center font-bold text-lg shrink-0">
+            !
+          </div>
+          <div>
+            <h2 class="text-base sm:text-lg font-bold leading-snug">Parameter Knock-Out Contestation</h2>
+            <p class="text-xs text-rose-100">Select a knocked-out item, give the reason & attach evidence</p>
+          </div>
+        </div>
+        <button onclick="closeModal()" class="text-white/80 hover:text-white p-1 rounded-lg transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <form id="contestation-form" onsubmit="submitContestation(event)" class="p-6 space-y-4 max-h-[82vh] overflow-y-auto custom-scrollbar">
+        
+        <!-- Facility & Parameter Info Card -->
+        <div class="bg-slate-50 border border-slate-200/90 rounded-xl p-4 space-y-2.5 text-xs">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-slate-500">Health Facility:</span>
+            <span id="modal-facility-name" class="font-bold text-slate-900 text-sm text-right">B.H.U Dodo Detho (233007)</span>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-slate-500">Region / District:</span>
+            <span id="modal-region-district" class="font-semibold text-slate-800">Sukkur • Shikarpur</span>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-slate-500">Facility Type (Transition):</span>
+            <span id="modal-transition-badge" class="font-semibold text-slate-800">Existing HF (-)</span>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-slate-500">Assessment Visit:</span>
+            <span id="modal-visit-date" class="font-medium text-slate-700">2026-10-22 11:07</span>
+          </div>
+          <div class="flex items-center justify-between gap-2 pt-1">
+            <span class="text-slate-500">Knocked-Out Parameter:</span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-rose-50 border border-rose-200 text-rose-700 font-semibold">
+              <span>✕</span> Essential Medicines Availability
+            </span>
+          </div>
+
+          <div class="pt-2">
+            <label class="block font-semibold text-slate-700 mb-1.5">Knocked-Out Sub-Parameter(s) (Select items to contest):</label>
+            <select id="modal-subparam-select" required onchange="handleSubParamChange()" class="w-full px-3 py-2.5 text-xs font-medium rounded-lg border-2 border-rose-300 bg-white text-slate-800 focus:outline-none focus:border-rose-500">
+              <option value="">-- Select knocked-out sub-parameter --</option>
+            </select>
+            <p id="modal-remaining-count" class="text-[11px] text-slate-500 mt-1.5">0 of 0 knocked-out items left to contest</p>
+          </div>
+        </div>
+
+        <!-- Primary Reason -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Primary Reason for Contestation <span class="text-rose-600">*</span></label>
+          <select id="modal-reason-select" required class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600">
+            <option value="">-- Select a sub-parameter first --</option>
+          </select>
+        </div>
+
+        <!-- Contesting Officer & Role -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Contesting Officer Name <span class="text-rose-600">*</span></label>
+            <input type="text" id="modal-officer-name" required placeholder="e.g. Dr. Ahmed Ali" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Designation / Role <span class="text-rose-600">*</span></label>
+            <input type="text" id="modal-officer-role" required placeholder="e.g. WMO / Facility In-charge" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600" />
+          </div>
+        </div>
+
+        <!-- Evidence Reference -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Evidence / Stock Register / Photo Reference</label>
+          <input type="text" id="modal-evidence-ref" placeholder="e.g. Stock Reg Pg#42, Medicine Bin Card Oct-26, or Photo Link" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600" />
+        </div>
+
+        <!-- File Upload Box -->
+        <div>
+          <label for="modal-file-input" class="flex items-center gap-3 p-3.5 border-2 border-dashed border-slate-300 hover:border-teal-500 rounded-xl cursor-pointer transition bg-slate-50/50">
+            <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+            <div class="text-xs">
+              <span class="font-semibold text-slate-700">Attach evidence file(s)</span>
+              <span class="text-slate-500"> — photo, PDF or document • max 5 files, 8 MB each</span>
+              <div id="modal-file-list" class="text-teal-700 font-semibold mt-0.5"></div>
+            </div>
+          </label>
+          <input type="file" id="modal-file-input" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" onchange="handleFileSelect(event)" class="hidden" />
+        </div>
+
+        <!-- Detailed Justification -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Detailed Justification & Remarks <span class="text-rose-600">*</span></label>
+          <textarea id="modal-remarks" rows="3" required placeholder="Provide factual details supporting why this parameter should be reconsidered..." class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600"></textarea>
+        </div>
+
+        <!-- Footer Buttons -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-[#0f766e] hover:bg-[#115e59] rounded-lg shadow-sm transition">
+            Save Contestation
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden items-center gap-2.5 bg-slate-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-xl border border-slate-700">
+    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+    <span id="toast-msg">Contestation saved and routed to Compliance!</span>
+  </div>
+
+  <script>
+    // 22 Essential Medicine Sub-Parameters from Justification Sheet - Medicine.xlsx
+    const MEDICINE_PARAMS = [
+      { short: "Cap. Amoxicillin", full: "Cap. Amoxicillin/Ampicillin" },
+      { short: "Amoxicillin DT/Syp", full: "Amoxicillin DT / Syrup Amoxicillin" },
+      { short: "Tab. Erythromycin/Aug", full: "Tablet Erythromycin/Amoxicillin+Clavulanic Acid" },
+      { short: "Syp. Erythromycin/Clar", full: "Syrup Erythromycin/Clarithromycin/Amoxicillin+Clavulanic Acid" },
+      { short: "Tab. Metronidazole", full: "Tablet Metronidazole" },
+      { short: "Inj. Ampicillin/Ceftriax", full: "Injection Ampicillin/Amoxicillin/Augmentin/Gentamicin/Ceftriaxone" },
+      { short: "Tab. Diclofenac/Para", full: "Tablet Diclofenac/Paracetamol/Ibuprofen/Mefenamic acid" },
+      { short: "Inj. Diclofenac/Para", full: "Injection Diclofenac/Paracetamol" },
+      { short: "Syp. Paracetamol/Ibu", full: "Syrup Paracetamol/Ibuprofen/Mefenamic acid" },
+      { short: "Tab. Chloroquine/AL", full: "Tablet Chloroquine/Artemether+Lumefantrine" },
+      { short: "Syp. Salbutamol", full: "Syrup Salbutamol" },
+      { short: "Antihelminthic", full: "Syrup/Tablet Antihelminthic (Albendazole/Mebendazole)" },
+      { short: "Antihistamine/CPM", full: "Syrup/Tablet Antihistamine/Chlorpheniramine maleate" },
+      { short: "IV Infusions/NS/RL", full: "IV Infusions/Dextrose infusion/Normal saline/Ringer lactate" },
+      { short: "Inj. Dexamethasone", full: "Injection Dexamethasone/Hydrocortisone" },
+      { short: "Iron / Folic Acid", full: "Tablet/Capsule Iron/Folic Acid" },
+      { short: "ORS", full: "ORS" },
+      { short: "Tab. Misoprostol", full: "Tablet Misoprostol" },
+      { short: "Inj. MgSO4", full: "Injection Magnesium Sulphate" },
+      { short: "Syrup / DT Zinc", full: "Syrup Zinc / Zinc DT / Zinc Tablets" },
+      { short: "Anti-snake Venom (ASV)", full: "Anti-snake Venom (ASV)" },
+      { short: "Anti-rabies Vaccine (ARV)", full: "Anti-rabies vaccine (ARV)" }
+    ];
+
+    // Contestation Reasons from Sheet5
+    const CONTESTATION_REASONS = [
+      "Supplied / Restocked",
+      "Verified Available in stock / MMU-Miss reported",
+      "Not Supplied by Malaria Program",
+      "Facility not Managed by PPHI",
+      "Non-ASV Center",
+      "Non-ARV Center",
+      "Dispenser on Polio but All items were Available",
+      "Short at DO store",
+      "Stock will be supplied"
+    ];
+
+    // Complete 255 Facility Records from Justification Sheet - Medicine.xlsx
+    const RAW_FACILITIES = [{"c":"211051","r":"Mirpurkhas","d":"Badin - B","w":"(6/6)","n":"BHU Ghulam Muhammad Nizamani","t":"-","v":"2026-10-16 09:26","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","-"]},{"c":"211056","r":"Mirpurkhas","d":"Badin - B","w":"(24/7)","n":"BHU Rahuki","t":"-","v":"2026-10-09 10:22","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-"]},{"c":"211086","r":"Mirpurkhas","d":"Badin - A","w":"(6/6)","n":"DCD Abdul Sattar Pirzada","t":"-","v":"2026-10-01 11:20","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"211095","r":"Mirpurkhas","d":"Badin - B","w":"(6/6)","n":"DCD Madina Farm","t":"-","v":"2026-10-10 08:56","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"211117","r":"Mirpurkhas","d":"Badin - A","w":"(6/6)","n":"DCD Mevo Khan Laghari","t":"-","v":"2026-10-01 10:05","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"211094","r":"Mirpurkhas","d":"Badin - B","w":"(6/6)","n":"DCD Noor Mohammad Samejo","t":"-","v":"2026-10-03 13:10","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"211093","r":"Mirpurkhas","d":"Badin - A","w":"(6/6)","n":"DCD Saman Sarkar","t":"-","v":"2026-10-19 12:14","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"211114","r":"Mirpurkhas","d":"Badin - B","w":"(6/6)","n":"ED Allah Bachayo Hajjam","t":"-","v":"2026-10-03 10:05","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"211101","r":"Mirpurkhas","d":"Badin - B","w":"(6/6)","n":"ED Baran Laghari","t":"-","v":"2026-10-13 08:41","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"211106","r":"Mirpurkhas","d":"Badin - A","w":"(6/6)","n":"ED Misri Khoso","t":"-","v":"2026-10-19 10:36","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-","-","✖","-","-"]},{"c":"211118","r":"Mirpurkhas","d":"Badin - A","w":"(6/6)","n":"ED Mohammad Bachal Ahmedani","t":"-","v":"2026-10-19 11:46","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"212166","r":"Larkana","d":"Dadu","w":"(6/6)","n":"BHU Beledai","t":"1","v":"2026-10-20 13:16","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"212024","r":"Larkana","d":"Dadu","w":"(6/6)","n":"BHU Borriri","t":"-","v":"2026-10-08 09:53","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","-","-"]},{"c":"212025","r":"Larkana","d":"Dadu","w":"(24/7)","n":"BHU Burrira","t":"-","v":"2026-10-12 08:28","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-","-"]},{"c":"212044","r":"Larkana","d":"Dadu","w":"(6/6)","n":"BHU Butt Serrai","t":"-","v":"2026-10-08 14:17","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"212045","r":"Larkana","d":"Dadu","w":"(6/6)","n":"BHU Faridabad","t":"-","v":"2026-10-07 10:16","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"212003","r":"Larkana","d":"Dadu","w":"(6/6)","n":"BHU Ibrahim Panhwar","t":"-","v":"2026-10-06 12:54","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"212030","r":"Larkana","d":"Dadu","w":"(24/7)","n":"BHU Khanpur","t":"-","v":"2026-10-08 11:22","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔"]},{"c":"212009","r":"Larkana","d":"Dadu","w":"(24/7)","n":"BHU Phulji Station","t":"-","v":"2026-10-06 14:06","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","-","-"]},{"c":"212011","r":"Larkana","d":"Dadu","w":"(6/6)","n":"BHU Piaro Goth","t":"-","v":"2026-10-06 12:13","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"212051","r":"Larkana","d":"Dadu","w":"(6/6)","n":"BHU Saeedpur","t":"-","v":"2026-10-07 08:16","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"212038","r":"Larkana","d":"Dadu","w":"(6/6)","n":"Chutto Briahmani","t":"1","v":"2026-10-06 13:46","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"212032","r":"Larkana","d":"Dadu","w":"(6/6)","n":"GD Gul Mohammad Chandio","t":"-","v":"2026-10-08 08:50","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"212096","r":"Larkana","d":"Dadu","w":"(6/6)","n":"GD Jat Shahdad","t":"-","v":"2026-10-06 09:35","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"212119","r":"Larkana","d":"Dadu","w":"(6/6)","n":"GD Kakar","t":"-","v":"2026-10-08 10:42","s":["✔","✖","✔","✔","✔","✔","✔","✔","✔","✖","✔","✖","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"212132","r":"Larkana","d":"Dadu","w":"(6/6)","n":"GD Shafi Muhammad Panhwar","t":"-","v":"2026-10-09 11:50","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"212004","r":"Larkana","d":"Dadu","w":"(6/6)","n":"Kero","t":"1","v":"2026-10-06 08:38","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-","-"]},{"c":"212196","r":"Larkana","d":"Dadu","w":"(24/7)","n":"MCH Center Shaheed Syed Ali Mardan Shah","t":"1","v":"2026-10-17 10:16","s":["✔","✔","✖","✖","✖","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"212052","r":"Larkana","d":"Dadu","w":"(24/7)","n":"MCHC Faridabad","t":"-","v":"2026-10-07 09:13","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"212057","r":"Larkana","d":"Dadu","w":"(6/6)","n":"Taj Mohammad Zardari","t":"-","v":"2026-10-10 14:14","s":["✔","✔","✔","✖","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"245005","r":"Sukkur","d":"Ghotki","w":"(6/6)","n":"BHU Forming Society","t":"-","v":"2026-10-06 10:23","s":["✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✖","✔","✔","✔","✔","✔","-","-"]},{"c":"245009","r":"Sukkur","d":"Ghotki","w":"(24/7)","n":"BHU Saleh Mahar","t":"-","v":"2026-10-10 09:15","s":["✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✖","✔","✔","✔","✔","✔","✔","✖","✔","-","-"]},{"c":"245508","r":"Sukkur","d":"Ghotki","w":"(6/6)","n":"DCD Rang Ali Shah","t":"-","v":"2026-10-05 11:49","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"245117","r":"Sukkur","d":"Ghotki","w":"(6/6)","n":"GD Changlani","t":"-","v":"2026-10-03 12:15","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"245123","r":"Sukkur","d":"Ghotki","w":"(24/7)","n":"GD Hayat Pitafi","t":"-","v":"2026-10-06 13:11","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✖","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"245514","r":"Sukkur","d":"Ghotki","w":"(6/6)","n":"GD Jumo Khoso","t":"1","v":"2026-10-12 11:59","s":["✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"245517","r":"Sukkur","d":"Ghotki","w":"(6/6)","n":"GD Naseer Dhandhu","t":"1","v":"2026-10-08 11:57","s":["✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"245127","r":"Sukkur","d":"Ghotki","w":"(6/6)","n":"GD Pir Jo Goth","t":"-","v":"2026-10-12 13:39","s":["✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"245501","r":"Sukkur","d":"Ghotki","w":"(6/6)","n":"GD Qazi Badal","t":"-","v":"2026-10-07 13:09","s":["✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"245120","r":"Sukkur","d":"Ghotki","w":"(6/6)","n":"GD Sijawal Dhandhu","t":"-","v":"2026-10-07 11:46","s":["✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"245515","r":"Sukkur","d":"Ghotki","w":"(6/6)","n":"GD Yaro Lund","t":"1","v":"2026-10-12 12:01","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"245502","r":"Sukkur","d":"Ghotki","w":"(24/7)","n":"MCH Centre Mirpur Mathelo","t":"-","v":"2026-10-14 12:39","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","-"]},{"c":"213018","r":"Hyderabad","d":"Hyderabad","w":"(24/7)","n":"BHU Sehrish Nagar","t":"-","v":"2026-10-05 12:24","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✖"]},{"c":"213032","r":"Hyderabad","d":"Hyderabad","w":"(6/6)","n":"GD Habibullah Memon","t":"-","v":"2026-10-10 09:22","s":["✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"231015","r":"Larkana","d":"Jacobabad","w":"(6/6)","n":"GD Juma Khan Dashti","t":"-","v":"2026-10-07 09:33","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"231004","r":"Larkana","d":"Jacobabad","w":"(24/7)","n":"RHC Garhi Hassan","t":"-","v":"2026-10-13 10:16","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔"]},{"c":"215113","r":"Hyderabad","d":"Jamshoro - A","w":"(6/6)","n":"ED Khasai","t":"-","v":"2026-10-20 08:27","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"234014","r":"Larkana","d":"Kamber","w":"(24/7)","n":"BHU Ghazi Khan Khuhawar","t":"-","v":"2026-10-06 08:09","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","-","-"]},{"c":"234045","r":"Larkana","d":"Kamber","w":"(6/6)","n":"BHU Mir Pur Buriro","t":"-","v":"2026-10-10 13:53","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"234114","r":"Larkana","d":"Kamber","w":"(6/6)","n":"GD Ghulam Rasool Magsi","t":"-","v":"2026-10-09 09:40","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"234108","r":"Larkana","d":"Kamber","w":"(6/6)","n":"GD Jean Abro","t":"-","v":"2026-10-02 10:10","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"234128","r":"Larkana","d":"Kamber","w":"(24/7)","n":"GD Sijawal","t":"-","v":"2026-10-17 08:16","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"234923","r":"Larkana","d":"Kamber","w":"(6/6)","n":"GD Suhno Khan","t":"-","v":"2026-10-09 11:34","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✖","-","-"]},{"c":"224158","r":"Karachi","d":"Karachi 2 A","w":"(6/6)","n":"Dhoodha Goth","t":"1","v":"2026-10-05 10:22","s":["✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"222105","r":"Karachi","d":"Karachi 2 A","w":"(6/6)","n":"ED Junejo Colony","t":"-","v":"2026-10-05 11:05","s":["✔","✔","✔","✖","✔","✔","✔","✔","✔","✖","✖","✔","✔","✔","✔","✖","✔","-","-","✔","-","-"]},{"c":"222104","r":"Karachi","d":"Karachi 2 A","w":"(6/6)","n":"ED Machar Colony / SGD Fateh Muhammad Gabol","t":"-","v":"2026-10-05 12:36","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"223130","r":"Karachi","d":"Karachi 2 B","w":"(6/6)","n":"SGD Ward 72 Korangi","t":"1","v":"2026-10-19 11:53","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","-","-","✔","-","-"]},{"c":"223151","r":"Karachi","d":"Karachi 2 B","w":"(6/6)","n":"SGD Ward 77","t":"1","v":"2026-10-15 10:55","s":["✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","-","-","✔","-","-"]},{"c":"226012","r":"Karachi","d":"Malir","w":"(24/7)","n":"36 Bedded Hospital Rehri Miani","t":"-","v":"2026-10-07 09:52","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✖","✔","✖","✖","✖"]},{"c":"226042","r":"Karachi","d":"Malir","w":"(6/6)","n":"Bakhsha Village","t":"-","v":"2026-10-13 12:24","s":["✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"226037","r":"Karachi","d":"Malir","w":"(6/6)","n":"BHU Haji Abdul Kareem Gabol Goth","t":"1","v":"2026-10-13 10:15","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔"]},{"c":"226040","r":"Karachi","d":"Malir","w":"(6/6)","n":"BHU Hyderwah","t":"-","v":"2026-10-13 12:57","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"226043","r":"Karachi","d":"Malir","w":"(6/6)","n":"Dur Muhammed Goth","t":"-","v":"2026-10-20 10:50","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"226424","r":"Karachi","d":"Malir","w":"(6/6)","n":"ED Old Muzafarabad","t":"-","v":"2026-10-13 09:49","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"226423","r":"Karachi","d":"Malir","w":"(6/6)","n":"ED Waziristan Chowk / Ghulshan e buneer","t":"-","v":"2026-10-13 11:25","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"226001","r":"Karachi","d":"Malir","w":"(6/6)","n":"SGD Abdul Hakeem Gabol Goth","t":"-","v":"2026-10-05 11:08","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✖","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"226034","r":"Karachi","d":"Malir","w":"(6/6)","n":"SGD Jam Goth","t":"-","v":"2026-10-07 10:29","s":["✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"226022","r":"Karachi","d":"Malir","w":"(6/6)","n":"SGD Lath Basti","t":"-","v":"2026-10-07 12:12","s":["✖","✔","✖","✔","✖","✔","✖","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"225277","r":"Karachi","d":"Karachi 2 B","w":"(6/6)","n":"SGD Dehli Punjab Colony","t":"1","v":"2026-10-08 12:29","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","✔"]},{"c":"221233","r":"Karachi","d":"Karachi 2 A","w":"(6/6)","n":"BHU Baloch Goth","t":"1","v":"2026-10-19 13:13","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","✔"]},{"c":"221318","r":"Karachi","d":"Karachi 2 A","w":"(6/6)","n":"ED Kuwari","t":"-","v":"2026-10-12 12:24","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"221316","r":"Karachi","d":"Karachi 2 A","w":"(6/6)","n":"ED Raja Tanveer Colony","t":"-","v":"2026-10-20 10:34","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"235018","r":"Larkana","d":"Kashmore","w":"(6/6)","n":"BHU Gulanpur","t":"-","v":"2026-10-17 11:20","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"235021","r":"Larkana","d":"Kashmore","w":"(24/7)","n":"BHU Khewali","t":"-","v":"2026-10-13 11:06","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"235043","r":"Larkana","d":"Kashmore","w":"(6/6)","n":"GD Kashmore Colony-I","t":"-","v":"2026-10-13 12:57","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"235041","r":"Larkana","d":"Kashmore","w":"(6/6)","n":"GD Mando Khan Jakhrani","t":"-","v":"2026-10-17 13:04","s":["✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","-","-","✔","-","-"]},{"c":"235071","r":"Larkana","d":"Kashmore","w":"(6/6)","n":"GD Mir Hassan Khoso","t":"-","v":"2026-10-12 12:43","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"235039","r":"Larkana","d":"Kashmore","w":"(24/7)","n":"GD Sardaro Khoso","t":"-","v":"2026-10-12 11:11","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"241047","r":"Sukkur","d":"Khairpur - B","w":"(24/7)","n":"BHU Ahmedpur","t":"-","v":"2026-10-14 10:21","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-"]},{"c":"241091","r":"Sukkur","d":"Khairpur - B","w":"(24/7)","n":"BHU Bachal Bhambro (SD)","t":"-","v":"2026-10-19 10:56","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-"]},{"c":"241005","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"BHU Bhellar Wada","t":"-","v":"2026-10-07 12:31","s":["✖","✔","✖","✖","✖","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✖","✔","✔","✔","✔","-","-"]},{"c":"241032","r":"Sukkur","d":"Khairpur - A","w":"(6/6)","n":"BHU Haji Imam Bux Palh","t":"-","v":"2026-10-05 10:10","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"241034","r":"Sukkur","d":"Khairpur - A","w":"(24/7)","n":"BHU Hussain Abad","t":"-","v":"2026-10-17 12:37","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"241110","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"BHU Khalifa Huryah","t":"-","v":"2026-10-20 12:59","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-","-"]},{"c":"241187","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"BHU Kharalabad","t":"-","v":"2026-10-14 08:46","s":["✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"241023","r":"Sukkur","d":"Khairpur - B","w":"(24/7)","n":"BHU Kot Mir Mohammed","t":"-","v":"2026-10-10 08:50","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","-"]},{"c":"241012","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"BHU Lakha Wada","t":"-","v":"2026-10-15 10:29","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"241151","r":"Sukkur","d":"Khairpur - B","w":"(24/7)","n":"BHU Manghan Wari","t":"-","v":"2026-10-17 09:53","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","-","-"]},{"c":"241052","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"BHU Phori Chandio","t":"-","v":"2026-10-07 09:44","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","-","-"]},{"c":"241064","r":"Sukkur","d":"Khairpur - B","w":"(24/7)","n":"BHU Piryaloi","t":"-","v":"2026-10-12 10:34","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","-"]},{"c":"241015","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"BHU Razi Dero","t":"-","v":"2026-10-14 10:49","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","-"]},{"c":"241017","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"BHU Rukrani","t":"-","v":"2026-10-19 11:52","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"241193","r":"Sukkur","d":"Khairpur - A","w":"(6/6)","n":"BHU Shahladhni","t":"-","v":"2026-10-12 08:34","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"241094","r":"Sukkur","d":"Khairpur - A","w":"(6/6)","n":"BHU Wada Machyoon","t":"-","v":"2026-10-10 10:05","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✖","-","-"]},{"c":"241200","r":"Sukkur","d":"Khairpur - A","w":"(6/6)","n":"DCD Aziz Chandio","t":"-","v":"2026-10-12 11:38","s":["✔","✔","✔","✖","✖","✔","✖","✔","✔","✖","✔","✔","✖","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"241207","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"DCD Shadi Dhoondhan","t":"-","v":"2026-10-10 08:26","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"241108","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"GD Ali Hyder Jalbani","t":"-","v":"2026-10-12 11:24","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"241140","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"GD Arab Phull","t":"-","v":"2026-10-12 10:19","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"241135","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"GD Fakir Mohammed Lakho","t":"-","v":"2026-10-15 10:10","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"241168","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"GD Gaad Sharif","t":"-","v":"2026-10-19 12:50","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"241087","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"GD Imdad Ali Sahito","t":"-","v":"2026-10-20 11:51","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"241218","r":"Sukkur","d":"Khairpur - A","w":"(6/6)","n":"GD Koro Khan Phulpoto","t":"1","v":"2026-10-02 10:42","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"241217","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"GD LAL BAKHSH KANDHARO","t":"-","v":"2026-10-07 09:10","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"241224","r":"Sukkur","d":"Khairpur - B","w":"(6/6)","n":"GD Rafique Mahesar","t":"1","v":"2026-10-07 08:49","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"241149","r":"Sukkur","d":"Khairpur - A","w":"(6/6)","n":"GD Razi Goth","t":"-","v":"2026-10-05 09:14","s":["✔","✔","✔","✖","✖","✖","✖","✖","✖","✔","✔","✔","✖","✔","✔","✔","✖","-","-","✔","-","-"]},{"c":"241056","r":"Sukkur","d":"Khairpur - A","w":"(6/6)","n":"GD Shah Abdul Latif University","t":"-","v":"2026-10-17 13:31","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"232006","r":"Larkana","d":"Larkana - B","w":"(6/6)","n":"BHU Bakhar Karira","t":"-","v":"2026-10-02 11:22","s":["✖","✖","✖","✖","✖","✔","✖","✔","✖","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"232005","r":"Larkana","d":"Larkana - B","w":"(6/6)","n":"BHU Karani","t":"-","v":"2026-10-01 14:01","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"232008","r":"Larkana","d":"Larkana - B","w":"(24/7)","n":"BHU New Gud","t":"-","v":"2026-10-05 12:11","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"232010","r":"Larkana","d":"Larkana - B","w":"(6/6)","n":"BHU Seehar","t":"-","v":"2026-10-01 11:31","s":["✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"232011","r":"Larkana","d":"Larkana - B","w":"(24/7)","n":"BHU Usman kalhoro","t":"-","v":"2026-10-01 09:52","s":["✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"232817","r":"Larkana","d":"Larkana - A","w":"(6/6)","n":"GD Ali Baig Kodrani","t":"-","v":"2026-10-20 09:59","s":["✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"232818","r":"Larkana","d":"Larkana - B","w":"(6/6)","n":"GD Bagi","t":"-","v":"2026-10-06 12:16","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✖","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"232098","r":"Larkana","d":"Larkana - B","w":"(6/6)","n":"GD Bhoombhatpur","t":"-","v":"2026-10-03 13:28","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"232811","r":"Larkana","d":"Larkana - B","w":"(6/6)","n":"GD Dara","t":"-","v":"2026-10-06 11:33","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","-","-","✔","-","-"]},{"c":"232819","r":"Larkana","d":"Larkana - A","w":"(6/6)","n":"GD Gadani","t":"-","v":"2026-10-12 12:47","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"232636","r":"Larkana","d":"Larkana - A","w":"(24/7)","n":"GD Gajan pur","t":"1","v":"2026-10-19 09:57","s":["✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"232821","r":"Larkana","d":"Larkana - A","w":"(6/6)","n":"GD Gocalpur","t":"-","v":"2026-10-12 13:12","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"232092","r":"Larkana","d":"Larkana - A","w":"(6/6)","n":"GD Gujjar","t":"-","v":"2026-10-06 10:49","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"232823","r":"Larkana","d":"Larkana - A","w":"(6/6)","n":"GD Khursheed Ji Wandh","t":"-","v":"2026-10-05 10:02","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"232801","r":"Larkana","d":"Larkana - B","w":"(6/6)","n":"GD Lal Bux Shaikh","t":"-","v":"2026-10-06 12:57","s":["✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"232094","r":"Larkana","d":"Larkana - A","w":"(6/6)","n":"GD Mehar Buriro","t":"-","v":"2026-10-20 09:44","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-","-","✖","-","-"]},{"c":"232813","r":"Larkana","d":"Larkana - B","w":"(6/6)","n":"GD Sher Muhammad Junejo","t":"-","v":"2026-10-06 13:55","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"232068","r":"Larkana","d":"Larkana - A","w":"(24/7)","n":"RHC Ghari Khuda Bux Bhutto","t":"-","v":"2026-10-15 10:28","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔"]},{"c":"218007","r":"Hyderabad","d":"Matiari","w":"(6/6)","n":"BHU Saeed Khan Laghari","t":"-","v":"2026-10-01 08:11","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","-"]},{"c":"218011","r":"Hyderabad","d":"Matiari","w":"(24/7)","n":"BHU Sekhat","t":"-","v":"2026-10-17 12:58","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔"]},{"c":"218089","r":"Hyderabad","d":"Matiari","w":"(6/6)","n":"BHU Yousuf Hajano","t":"-","v":"2026-10-19 09:46","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","-"]},{"c":"218002","r":"Hyderabad","d":"Matiari","w":"(6/6)","n":"DCD Zair Pir","t":"-","v":"2026-10-19 11:24","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","✖","-"]},{"c":"218139","r":"Hyderabad","d":"Matiari","w":"(6/6)","n":"GD Rano Bughio","t":"-","v":"2026-10-19 13:02","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","✖","-"]},{"c":"251016","r":"Mirpurkhas","d":"Mirpurkhas - A","w":"(24/7)","n":"BHU Girhore Sharif","t":"-","v":"2026-10-05 08:17","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-"]},{"c":"251043","r":"Mirpurkhas","d":"Mirpurkhas - A","w":"(6/6)","n":"BHU Khumbri","t":"-","v":"2026-10-14 13:11","s":["✖","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"251015","r":"Mirpurkhas","d":"Mirpurkhas - A","w":"(24/7)","n":"BHU Usman Junejo","t":"-","v":"2026-10-19 08:36","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","-","-"]},{"c":"251024","r":"Mirpurkhas","d":"Mirpurkhas - A","w":"(6/6)","n":"DCD Deedio Meghwar","t":"-","v":"2026-10-05 12:38","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"251035","r":"Mirpurkhas","d":"Mirpurkhas - A","w":"(6/6)","n":"DCD Hussain Dars","t":"-","v":"2026-10-14 10:39","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✖","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"251105","r":"Mirpurkhas","d":"Mirpurkhas - A","w":"(6/6)","n":"DCD Nazar Muhammad Brohi","t":"-","v":"2026-10-03 10:07","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"251112","r":"Mirpurkhas","d":"Mirpurkhas - B","w":"(6/6)","n":"GD 149/A Kumbhar Mohallah","t":"1","v":"2026-10-13 12:00","s":["✔","✔","✔","✖","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"251020","r":"Mirpurkhas","d":"Mirpurkhas - A","w":"(6/6)","n":"GD Ahmed Bux Narejo","t":"-","v":"2026-10-14 11:28","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"251101","r":"Mirpurkhas","d":"Mirpurkhas - B","w":"(6/6)","n":"GD Ali Murad Bhatti","t":"-","v":"2026-10-05 12:27","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"251021","r":"Mirpurkhas","d":"Mirpurkhas - A","w":"(6/6)","n":"GD Dilber Mehar","t":"-","v":"2026-10-14 08:41","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"251111","r":"Mirpurkhas","d":"Mirpurkhas - B","w":"(6/6)","n":"GD Gul Muhammad","t":"1","v":"2026-10-12 10:24","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"251019","r":"Mirpurkhas","d":"Mirpurkhas - A","w":"(6/6)","n":"GD Jhurbi","t":"-","v":"2026-10-19 10:45","s":["✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"251056","r":"Mirpurkhas","d":"Mirpurkhas - A","w":"(6/6)","n":"GD Kamal Khan Laghari","t":"-","v":"2026-10-19 09:34","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","-","-","✔","-","-"]},{"c":"251033","r":"Mirpurkhas","d":"Mirpurkhas - B","w":"(6/6)","n":"GD Mir Hassan Kaloi","t":"-","v":"2026-10-12 11:08","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✖","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"251074","r":"Mirpurkhas","d":"Mirpurkhas - B","w":"(6/6)","n":"GD Ramzan Kalro","t":"-","v":"2026-10-13 11:25","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"251087","r":"Mirpurkhas","d":"Mirpurkhas - B","w":"(6/6)","n":"GD Roopchand Kolhi","t":"-","v":"2026-10-15 12:38","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"242047","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"BHU Ali Sher Chang","t":"-","v":"2026-10-14 08:57","s":["✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"242048","r":"SBA","d":"Naushero Feroze -A","w":"(24/7)","n":"BHU Baig Mohammad Panhwer","t":"-","v":"2026-10-20 11:49","s":["✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","-","-"]},{"c":"242046","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"BHU Bhounr","t":"-","v":"2026-10-15 09:37","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"242030","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"BHU Chanheen Suleman","t":"-","v":"2026-10-01 13:05","s":["✔","✖","✖","✖","✖","✔","✖","✔","✖","✔","✖","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"242031","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"BHU Dageja","t":"-","v":"2026-10-16 10:58","s":["✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"242041","r":"SBA","d":"Naushero Feroze -A","w":"(24/7)","n":"BHU Deparja","t":"-","v":"2026-10-03 13:03","s":["✖","✖","✖","✖","✔","✔","✖","✔","✔","✔","✖","✖","✖","✖","✖","✖","✔","✔","✔","✔","-","-"]},{"c":"242032","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"BHU Fattoo Balal","t":"-","v":"2026-10-15 10:47","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-","-"]},{"c":"242042","r":"SBA","d":"Naushero Feroze -A","w":"(24/7)","n":"BHU Gher Gaju","t":"-","v":"2026-10-02 08:24","s":["✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✖","✔","✖","✖","✔","✔","✔","✔","-","-"]},{"c":"242034","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"BHU Gul Mohammad Jatoi","t":"-","v":"2026-10-15 12:29","s":["✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"242057","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"BHU Kandher","t":"-","v":"2026-10-09 10:05","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✖","✔","✔","✔","✔","✔","✔","✖","✔","✔","-","-"]},{"c":"242049","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"BHU Kot Ghulam Shah","t":"-","v":"2026-10-12 09:57","s":["✔","✔","✔","✖","✔","✔","✔","✔","✔","✖","✖","✔","✔","✔","✔","✔","✔","✖","✔","✔","-","-"]},{"c":"242044","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"BHU Mole Dino Larik","t":"-","v":"2026-10-05 09:55","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"242043","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"BHU Palahno (Faqeer Usman Tunio)","t":"-","v":"2026-10-10 10:05","s":["✔","✖","✖","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"242035","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"BHU Pinjal Faqeer","t":"-","v":"2026-10-16 09:12","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-","-"]},{"c":"242055","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"BHU Puran","t":"-","v":"2026-10-08 10:54","s":["✖","✖","✖","✖","✔","✔","✔","✔","✔","✔","✖","✔","✖","✔","✔","✔","✖","✔","✔","✔","-","-"]},{"c":"242028","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"BHU Rahim Chand","t":"-","v":"2026-10-05 11:46","s":["✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"242050","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"BHU Saeed Khan Lakho","t":"-","v":"2026-10-17 13:41","s":["✔","✖","✖","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"242039","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"BHU Saeed Pur","t":"-","v":"2026-10-17 11:33","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","-","-"]},{"c":"242147","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"GD Abdul Rehman Sethar","t":"1","v":"2026-10-17 09:22","s":["✖","✖","✖","✖","✔","✔","✔","✔","✔","✖","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"242088","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"GD Abran","t":"1","v":"2026-10-20 10:28","s":["✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"242104","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"GD Allah Dito Bhanbhro","t":"1","v":"2026-10-07 11:51","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"242106","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"GD Chibhar Maher","t":"1","v":"2026-10-15 11:55","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"242099","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"GD Darya Khan Jalbani","t":"1","v":"2026-10-14 09:59","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"242061","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"GD Faiz Mohammad Rajper","t":"-","v":"2026-10-17 10:47","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"242095","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"GD Khaimtio Mahaser","t":"1","v":"2026-10-20 10:36","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"242150","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"GD Khair Muhammad Dasti","t":"1","v":"2026-10-19 09:23","s":["✖","✖","✖","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"242063","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"GD Kouro Memon","t":"-","v":"2026-10-19 13:37","s":["✔","✖","✖","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"242086","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"GD Lundo","t":"1","v":"2026-10-02 08:57","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✖","✖","✔","✖","✔","✔","✔","✔","-","-","✖","-","-"]},{"c":"242064","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"GD Mureed Khan Solangi","t":"1","v":"2026-10-15 10:47","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✖","✔","✔","✖","✔","✔","✔","-","-","✔","-","-"]},{"c":"242098","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"GD Shah Beg Sabki","t":"1","v":"2026-10-02 11:30","s":["✖","✖","✖","✖","✔","✔","✖","✔","✔","✖","✔","✔","✔","✔","✖","✔","✔","-","-","✔","-","-"]},{"c":"242143","r":"SBA","d":"Naushero Feroze -A","w":"(6/6)","n":"GD Sher Muhammad Abro","t":"1","v":"2026-10-20 11:05","s":["✖","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"242004","r":"SBA","d":"Naushero Feroze - B","w":"(24/7)","n":"RHC Bhiria City","t":"1","v":"2026-10-01 10:08","s":["✖","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔"]},{"c":"242007","r":"SBA","d":"Naushero Feroze -A","w":"(24/7)","n":"RHC Mithiani","t":"1","v":"2026-10-20 08:27","s":["✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔"]},{"c":"242013","r":"SBA","d":"Naushero Feroze -A","w":"(24/7)","n":"RHC Padidan","t":"1","v":"2026-10-03 09:58","s":["✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✖","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔"]},{"c":"242087","r":"SBA","d":"Naushero Feroze - B","w":"(6/6)","n":"SHC Bukhri","t":"1","v":"2026-10-12 11:19","s":["✖","✖","✖","✖","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"252022","r":"SBA","d":"Sanghar - A","w":"(6/6)","n":"BHU 30 Jamraoo","t":"-","v":"2026-10-05 11:13","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"252077","r":"SBA","d":"Sanghar - A","w":"(6/6)","n":"BHU Kalu Rajar","t":"-","v":"2026-10-19 10:21","s":["✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"252042","r":"SBA","d":"Sanghar - B","w":"(6/6)","n":"BHU Maroof Dahiri","t":"-","v":"2026-10-05 10:04","s":["✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"252007","r":"SBA","d":"Sanghar - A","w":"(24/7)","n":"RHC Kandiari","t":"1","v":"2026-10-09 10:21","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✖"]},{"c":"243015","r":"SBA","d":"Shaheed Benazirabad - B","w":"(6/6)","n":"BHU Hamal Fakir","t":"-","v":"2026-10-10 12:31","s":["✖","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"243012","r":"SBA","d":"Shaheed Benazirabad - B","w":"(6/6)","n":"BHU Khabar Lakhmir","t":"-","v":"2026-10-06 12:47","s":["✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"243123","r":"SBA","d":"Shaheed Benazirabad - A","w":"(6/6)","n":"GD Faiz Mohammad Bhangwar","t":"-","v":"2026-10-02 12:43","s":["✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"243023","r":"SBA","d":"Shaheed Benazirabad - B","w":"(6/6)","n":"GD Manhiro","t":"-","v":"2026-10-06 11:58","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-","-","✖","-","-"]},{"c":"243060","r":"SBA","d":"Shaheed Benazirabad - B","w":"(6/6)","n":"GD Palio Khero","t":"1","v":"2026-10-17 10:10","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"243055","r":"SBA","d":"Shaheed Benazirabad - B","w":"(6/6)","n":"GD Shah Inayat","t":"1","v":"2026-10-19 10:36","s":["✔","✔","✔","✖","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"243085","r":"SBA","d":"Shaheed Benazirabad - B","w":"(6/6)","n":"GD Totti","t":"1","v":"2026-10-02 12:00","s":["✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"243113","r":"SBA","d":"Shaheed Benazirabad - B","w":"(6/6)","n":"MCH Bakhsho Magsi","t":"-","v":"2026-10-05 12:25","s":["✖","✖","✖","✖","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"243093","r":"SBA","d":"Shaheed Benazirabad - B","w":"(6/6)","n":"MCH Bhai Khan Jamali","t":"-","v":"2026-10-06 12:34","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-","-"]},{"c":"243056","r":"SBA","d":"Shaheed Benazirabad - B","w":"(6/6)","n":"MCH Haji Murad Ali Chandio","t":"-","v":"2026-10-05 14:02","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-","-"]},{"c":"243069","r":"SBA","d":"Shaheed Benazirabad - A","w":"(6/6)","n":"MCH Muhammad Yaqqob Choudry","t":"1","v":"2026-10-12 13:23","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-","-"]},{"c":"243035","r":"SBA","d":"Shaheed Benazirabad - A","w":"(24/7)","n":"RHC Daur","t":"-","v":"2026-10-16 12:12","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔"]},{"c":"233011","r":"Sukkur","d":"Shikarpur","w":"(6/6)","n":"B.H.U Kabalo","t":"1","v":"2026-10-02 11:05","s":["✖","✖","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","-","-"]},{"c":"233032","r":"Sukkur","d":"Shikarpur","w":"(6/6)","n":"B.H.U Taib Goth","t":"1","v":"2026-10-10 08:53","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"233050","r":"Sukkur","d":"Shikarpur","w":"(6/6)","n":"District Council Medical Dispensary Booja Naper","t":"1","v":"2026-10-06 11:19","s":["✖","✖","✔","✖","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"214018","r":"Karachi","d":"Sujawal","w":"(24/7)","n":"BHU Plus Bannu","t":"-","v":"2026-10-05 12:53","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✖","✔","✔","✔","✔"]},{"c":"214021","r":"Karachi","d":"Sujawal","w":"(24/7)","n":"BHU Plus Kandhra","t":"-","v":"2026-10-20 11:57","s":["✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔"]},{"c":"214023","r":"Karachi","d":"Sujawal","w":"(6/6)","n":"BHU Rahooth","t":"-","v":"2026-10-05 13:41","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✖","✔","✔","✔","✔","✖","✔","✔","-","-"]},{"c":"244021","r":"Sukkur","d":"Sukkur","w":"(6/6)","n":"BHU Hussain Kalwar","t":"-","v":"2026-10-06 12:30","s":["✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"244023","r":"Sukkur","d":"Sukkur","w":"(6/6)","n":"BHU Nouraja","t":"-","v":"2026-10-15 12:09","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"244120","r":"Sukkur","d":"Sukkur","w":"(6/6)","n":"GD Ali Wahan","t":"-","v":"2026-10-05 11:23","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"244152","r":"Sukkur","d":"Sukkur","w":"#N/A","n":"GD Daffar jattoi","t":"-","v":"2026-10-16 10:34","s":["✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"244105","r":"Sukkur","d":"Sukkur","w":"(6/6)","n":"GD Jaffarabad","t":"-","v":"2026-10-17 08:11","s":["✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"244131","r":"Sukkur","d":"Sukkur","w":"(6/6)","n":"GD Microwave Colony Sukkur","t":"1","v":"2026-10-07 12:11","s":["✔","✖","✖","✖","✔","✔","✔","✔","✖","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"244137","r":"Sukkur","d":"Sukkur","w":"(6/6)","n":"GD Raza Goth","t":"1","v":"2026-10-13 09:58","s":["✔","✖","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"244140","r":"Sukkur","d":"Sukkur","w":"(6/6)","n":"GD Saeed Ali Indhar","t":"1","v":"2026-10-06 09:27","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"244139","r":"Sukkur","d":"Sukkur","w":"(6/6)","n":"GD Waloo Indhar","t":"1","v":"2026-10-12 10:12","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"244123","r":"Sukkur","d":"Sukkur","w":"(6/6)","n":"Government Dispensary Dreha","t":"1","v":"2026-10-06 11:46","s":["✔","✖","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"216015","r":"Hyderabad","d":"Tando Allahyar","w":"(24/7)","n":"BHU Piyaro Lund","t":"-","v":"2026-10-17 12:32","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔"]},{"c":"216014","r":"Hyderabad","d":"Tando Allahyar","w":"(6/6)","n":"GD Ghulam Hussain Lund","t":"-","v":"2026-10-05 11:40","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-","-","✖","-","-"]},{"c":"216037","r":"Hyderabad","d":"Tando Allahyar","w":"(6/6)","n":"GD Masoo Bozdar","t":"-","v":"2026-10-05 12:11","s":["✔","✔","✖","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"216046","r":"Hyderabad","d":"Tando Allahyar","w":"(6/6)","n":"GD Saeed Khan Laghari","t":"-","v":"2026-10-05 11:03","s":["✔","✖","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"219013","r":"Hyderabad","d":"Tando Muhammad Khan","w":"(24/7)","n":"BHU Jhanhan Soomro","t":"-","v":"2026-10-07 12:25","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✖","-"]},{"c":"219006","r":"Hyderabad","d":"Tando Muhammad Khan","w":"(6/6)","n":"BHU Khan Muhammad Vigamal","t":"-","v":"2026-10-01 13:39","s":["✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"253010","r":"Mirpurkhas","d":"Tharparkar - A","w":"(24/7)","n":"BHU Kot Arbab Mir Mohammed","t":"-","v":"2026-10-20 11:07","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖"]},{"c":"253067","r":"Mirpurkhas","d":"Tharparkar - A","w":"(6/6)","n":"BHU Mitho Dabhro","t":"1","v":"2026-10-13 11:16","s":["✖","✔","✔","✔","✖","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","-","-"]},{"c":"253042","r":"Mirpurkhas","d":"Tharparkar - B","w":"(6/6)","n":"BHU Samoon Rind","t":"-","v":"2026-10-03 12:08","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","-"]},{"c":"253093","r":"Mirpurkhas","d":"Tharparkar - A","w":"(6/6)","n":"BHU Venjhniyaree","t":"1","v":"2026-10-12 11:04","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"253006","r":"Mirpurkhas","d":"Tharparkar - B","w":"(6/6)","n":"BHU Wahori Dora","t":"-","v":"2026-10-02 12:02","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-"]},{"c":"253254","r":"Mirpurkhas","d":"Tharparkar - A","w":"(6/6)","n":"GD Ali Bander","t":"1","v":"2026-10-13 08:33","s":["✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"253167","r":"Mirpurkhas","d":"Tharparkar - B","w":"(6/6)","n":"GD Arblyar","t":"1","v":"2026-10-03 10:28","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✖","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"253292","r":"Mirpurkhas","d":"Tharparkar - B","w":"(6/6)","n":"GD Arnaro Waghoria","t":"1","v":"2026-10-19 12:17","s":["✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"253059","r":"Mirpurkhas","d":"Tharparkar - B","w":"(6/6)","n":"GD Bhagisal","t":"-","v":"2026-10-02 08:19","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"253250","r":"Mirpurkhas","d":"Tharparkar - A","w":"(6/6)","n":"GD Chahi Chapro","t":"1","v":"2026-10-01 11:16","s":["✖","✖","✔","✖","✖","✖","✖","✖","✖","✔","✖","✔","✔","✔","✖","✖","✔","-","-","✔","-","-"]},{"c":"253166","r":"Mirpurkhas","d":"Tharparkar - B","w":"(6/6)","n":"GD Dabhi Sultan Rind","t":"1","v":"2026-10-19 10:25","s":["✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"253271","r":"Mirpurkhas","d":"Tharparkar - B","w":"(6/6)","n":"GD Darga Mehan Shah Gazi","t":"1","v":"2026-10-07 11:06","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"253251","r":"Mirpurkhas","d":"Tharparkar - A","w":"(6/6)","n":"GD Dedsar","t":"1","v":"2026-10-14 10:46","s":["✔","✔","✔","✔","✖","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✖","✔","-","-","✖","-","-"]},{"c":"253304","r":"Mirpurkhas","d":"Tharparkar - B","w":"(6/6)","n":"GD Deenar Je Veri (Usman Paro)","t":"1","v":"2026-10-08 13:42","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"253113","r":"Mirpurkhas","d":"Tharparkar - A","w":"(6/6)","n":"GD Dero","t":"1","v":"2026-10-02 11:01","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"253162","r":"Mirpurkhas","d":"Tharparkar - A","w":"(6/6)","n":"GD Godhiar","t":"1","v":"2026-10-10 09:02","s":["✔","✔","✔","✖","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"253286","r":"Mirpurkhas","d":"Tharparkar - A","w":"(6/6)","n":"GD Kakrario","t":"1","v":"2026-10-05 13:15","s":["✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✖","✔","✔","-","-","✔","-","-"]},{"c":"253312","r":"Mirpurkhas","d":"Tharparkar - A","w":"(6/6)","n":"GD Kikari","t":"1","v":"2026-10-14 08:38","s":["✔","✔","✔","✔","✖","✔","✔","✖","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"253126","r":"Mirpurkhas","d":"Tharparkar - B","w":"(6/6)","n":"GD Nakrayo","t":"1","v":"2026-10-14 09:15","s":["✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"253122","r":"Mirpurkhas","d":"Tharparkar - A","w":"(6/6)","n":"GD Sobhiar","t":"1","v":"2026-10-12 12:44","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"253105","r":"Mirpurkhas","d":"Tharparkar - A","w":"(6/6)","n":"GD Tayab Sahar","t":"1","v":"2026-10-13 11:34","s":["✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"217111","r":"Karachi","d":"Thatta","w":"(6/6)","n":"DCD Darya Khan Shoro","t":"1","v":"2026-10-19 11:24","s":["✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"254032","r":"Mirpurkhas","d":"Umar Kot","w":"(6/6)","n":"BHU Darello","t":"-","v":"2026-10-12 08:43","s":["✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","✖","-"]},{"c":"254085","r":"Mirpurkhas","d":"Umar Kot","w":"(6/6)","n":"BHU Haji Pir Shah","t":"-","v":"2026-10-03 12:50","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-"]},{"c":"254054","r":"Mirpurkhas","d":"Umar Kot","w":"(24/7)","n":"BHU Kunri Memon","t":"-","v":"2026-10-06 12:26","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","-"]},{"c":"254012","r":"Mirpurkhas","d":"Umar Kot","w":"(24/7)","n":"BHU Nabisar Thar","t":"-","v":"2026-10-10 08:53","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-"]},{"c":"254058","r":"Mirpurkhas","d":"Umar Kot","w":"(6/6)","n":"BHU Okraro Chania","t":"-","v":"2026-10-08 08:46","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-"]},{"c":"254044","r":"Mirpurkhas","d":"Umar Kot","w":"(6/6)","n":"BHU Syed Nawaz Ali Shah","t":"-","v":"2026-10-14 11:31","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","-"]},{"c":"254001","r":"Mirpurkhas","d":"Umar Kot","w":"(24/7)","n":"BHU Toben Wari","t":"-","v":"2026-10-20 08:11","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔"]},{"c":"254133","r":"Mirpurkhas","d":"Umar Kot","w":"(6/6)","n":"DG Kharoro Charan","t":"1","v":"2026-10-06 10:56","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✖","✔","-","-","✔","-","-"]},{"c":"254138","r":"Mirpurkhas","d":"Umar Kot","w":"(6/6)","n":"GD Bheel & Kolhi Paro","t":"1","v":"2026-10-16 11:00","s":["✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"254105","r":"Mirpurkhas","d":"Umar Kot","w":"(6/6)","n":"GD Haji Samoon Nohri","t":"1","v":"2026-10-20 12:37","s":["✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"254125","r":"Mirpurkhas","d":"Umar Kot","w":"(6/6)","n":"GD Kolhi Daro Umerkot","t":"1","v":"2026-10-17 08:57","s":["✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"254137","r":"Mirpurkhas","d":"Umar Kot","w":"(6/6)","n":"GD Noor Muhammad Pali","t":"1","v":"2026-10-13 09:13","s":["✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","-","-","✔","-","-"]},{"c":"254143","r":"Mirpurkhas","d":"Umar Kot","w":"(6/6)","n":"GD Shadi Pali More","t":"1","v":"2026-10-03 12:01","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","-","-","✔","-","-"]},{"c":"254086","r":"Mirpurkhas","d":"Umar Kot","w":"(24/7)","n":"Hajra Maternity Home Kunri","t":"1","v":"2026-10-20 09:53","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]},{"c":"254127","r":"Mirpurkhas","d":"Umar Kot","w":"(6/6)","n":"MH Haji Ghulam Muhammad Rajar","t":"1","v":"2026-10-19 10:00","s":["✔","✔","✔","✔","✔","✔","✔","✔","✔","✖","✔","✔","✔","✔","✔","✔","✔","✔","✔","✔","-","-"]}];
+
+    // Application State
+    let contestations = [];
+    let activeFacilityCode = null;
+    let selectedFiles = [];
+    let currentPage = 1;
+    let pageSize = 25;
+
+    // Chart.js Instances
+    let regionChart = null;
+    let medicineChart = null;
+    let breakdownChart = null;
+
+    function init() {
+      populateFilters();
+      renderHeader();
+      refreshAll();
+    }
+
+    function refreshAll() {
+      const filtered = getFilteredFacilities();
+      renderRegionCards();
+      updateKPIs(filtered);
+      updateCharts(filtered);
+      renderTable(filtered);
+    }
+
+    function populateFilters() {
+      const regions = ["Mirpurkhas", "Sukkur", "Larkana", "SBA", "Karachi", "Hyderabad"];
+      const regSelect = document.getElementById("region-filter");
+      regions.forEach(reg => {
+        const count = RAW_FACILITIES.filter(f => f.r === reg).length;
+        const opt = document.createElement("option");
+        opt.value = reg;
+        opt.textContent = `${reg} (${count})`;
+        regSelect.appendChild(opt);
+      });
+      populateDistrictFilter("ALL");
+      const newCount = RAW_FACILITIES.filter(f => String(f.t).trim() === "1").length;
+      const existCount = RAW_FACILITIES.length - newCount;
+      const transSelect = document.getElementById("transition-filter");
+      transSelect.innerHTML = `
+        <option value="ALL">All Facility Types (${RAW_FACILITIES.length})</option>
+        <option value="1">Newly Taken HF [1] (${newCount})</option>
+        <option value="-">Existing HF [-] (${existCount})</option>
+      `;
+    }
+
+    function populateDistrictFilter(selectedRegion) {
+      const distSelect = document.getElementById("district-filter");
+      const currentDist = distSelect.value;
+      const relevant = selectedRegion === "ALL"
+        ? RAW_FACILITIES
+        : RAW_FACILITIES.filter(f => f.r === selectedRegion);
+
+      const districts = [...new Set(relevant.map(f => f.d))].sort();
+      distSelect.innerHTML = `<option value="ALL">All Districts (${districts.length})</option>` +
+        districts.map(d => `<option value="${d}">${d}</option>`).join("");
+
+      if (districts.includes(currentDist)) {
+        distSelect.value = currentDist;
+      }
+    }
+
+    function handleRegionDropdownChange() {
+      const reg = document.getElementById("region-filter").value;
+      populateDistrictFilter(reg);
+      currentPage = 1;
+      refreshAll();
+    }
+
+    function handleFilterChange() {
+      currentPage = 1;
+      refreshAll();
+    }
+
+    function toggleRegionFilter(reg) {
+      const regSelect = document.getElementById("region-filter");
+      regSelect.value = (regSelect.value === reg) ? "ALL" : reg;
+      populateDistrictFilter(regSelect.value);
+      currentPage = 1;
+      refreshAll();
+    }
+
+    function resetFilters() {
+      document.getElementById("search-input").value = "";
+      document.getElementById("region-filter").value = "ALL";
+      populateDistrictFilter("ALL");
+      document.getElementById("transition-filter").value = "ALL";
+      document.getElementById("wstatus-filter").value = "ALL";
+      document.getElementById("status-filter").value = "ALL";
+      currentPage = 1;
+      refreshAll();
+    }
+
+    function getFilteredFacilities() {
+      const search = document.getElementById("search-input").value.toLowerCase().trim();
+      const regionFilter = document.getElementById("region-filter").value;
+      const districtFilter = document.getElementById("district-filter").value;
+      const transitionFilter = document.getElementById("transition-filter").value;
+      const wStatusFilter = document.getElementById("wstatus-filter").value;
+      const statusFilter = document.getElementById("status-filter").value;
+
+      return RAW_FACILITIES.filter(f => {
+        if (regionFilter !== "ALL" && f.r !== regionFilter) return false;
+        if (districtFilter !== "ALL" && f.d !== districtFilter) return false;
+        if (transitionFilter !== "ALL" && String(f.t).trim() !== transitionFilter) return false;
+        if (wStatusFilter !== "ALL" && f.w !== wStatusFilter) return false;
+        if (search && !(
+          f.n.toLowerCase().includes(search) ||
+          f.c.toLowerCase().includes(search) ||
+          f.d.toLowerCase().includes(search)
+        )) return false;
+
+        const openCount = f.s.filter((st, idx) => st === "✖" && !contestations.some(c => c.facilityCode === f.c && c.paramIndex === idx)).length;
+        const contestedCount = contestations.filter(c => c.facilityCode === f.c).length;
+
+        if (statusFilter === "KNOCKOUT" && openCount === 0) return false;
+        if (statusFilter === "CONTESTED" && contestedCount === 0) return false;
+        if (statusFilter === "COMPLIANT" && (openCount > 0 || contestedCount > 0)) return false;
+
+        return true;
+      });
+    }
+
+    function renderRegionCards() {
+      const regions = ["Mirpurkhas", "Sukkur", "Larkana", "SBA", "Karachi", "Hyderabad"];
+      const container = document.getElementById("region-cards");
+      const currentFilter = document.getElementById("region-filter").value;
+
+      container.innerHTML = regions.map(reg => {
+        const recs = RAW_FACILITIES.filter(f => f.r === reg);
+        let openKO = 0;
+        let contested = 0;
+        let newlyTakenCount = 0;
+        let existingCount = 0;
+        recs.forEach(f => {
+          if (String(f.t).trim() === "1") newlyTakenCount++;
+          else existingCount++;
+          f.s.forEach((st, idx) => {
+            if (st === "✖") {
+              const isContested = contestations.some(c => c.facilityCode === f.c && c.paramIndex === idx);
+              if (isContested) contested++;
+              else openKO++;
+            }
+          });
+        });
+
+        const isSelected = currentFilter === reg;
+        return `
+          <button onclick="toggleRegionFilter('${reg}')" class="text-left p-3.5 rounded-xl border transition ${isSelected ? 'border-rose-500 bg-rose-50/70 ring-2 ring-rose-500/20 shadow-xs' : 'border-slate-200 bg-slate-50/50 hover:bg-white hover:shadow-xs'}">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-xs text-slate-900">${reg}</span>
+              <span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">${recs.length}</span>
+            </div>
+            <div class="mt-1.5 flex items-center gap-1.5 text-[10px] font-medium">
+              <span class="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200/70">New (1): ${newlyTakenCount}</span>
+              <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200/70">Existing (-): ${existingCount}</span>
+            </div>
+            <div class="mt-2 flex items-center justify-between text-[11px]">
+              <span class="text-rose-600 font-bold">${openKO} Open ✖</span>
+              <span class="text-amber-600 font-semibold">${contested} Contested</span>
+            </div>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function updateKPIs(filtered) {
+      let totalApplicable = 0;
+      let compliantOrContested = 0;
+      let openKnockOuts = 0;
+      let affectedFacilitiesSet = new Set();
+      let medKnockOutCounts = new Array(MEDICINE_PARAMS.length).fill(0);
+
+      let count66 = 0, count247 = 0, newlyTaken = 0, existingHF = 0;
+      filtered.forEach(f => {
+        if (f.w === "(6/6)") count66++;
+        else if (f.w === "(24/7)") count247++;
+        if (String(f.t).trim() === "1") newlyTaken++;
+        else existingHF++;
+
+        f.s.forEach((st, idx) => {
+          if (st === "✔") {
+            totalApplicable++;
+            compliantOrContested++;
+          } else if (st === "✖") {
+            totalApplicable++;
+            const isContested = contestations.some(c => c.facilityCode === f.c && c.paramIndex === idx);
+            if (isContested) {
+              compliantOrContested++;
+            } else {
+              openKnockOuts++;
+              affectedFacilitiesSet.add(f.c);
+              medKnockOutCounts[idx]++;
+            }
+          }
+        });
+      });
+
+      const relevantContestations = contestations.filter(c => filtered.some(f => f.c === c.facilityCode));
+      const verifiedCount = relevantContestations.filter(c => c.complianceStatus === "Compliance Verified").length;
+      const pendingCount = relevantContestations.length - verifiedCount;
+
+      const rate = totalApplicable ? ((compliantOrContested / totalApplicable) * 100).toFixed(1) : "100.0";
+
+      // Top knocked-out medicine
+      let maxIdx = 0;
+      medKnockOutCounts.forEach((val, idx) => {
+        if (val > medKnockOutCounts[maxIdx]) maxIdx = idx;
+      });
+
+      document.getElementById("kpi-total-facilities").textContent = filtered.length;
+      document.getElementById("kpi-facility-split").textContent = `${count66} (6/6) • ${count247} (24/7)`;
+      document.getElementById("kpi-transition-split").textContent = `${newlyTaken} Newly Taken (1) • ${existingHF} Existing (-)`;
+      document.getElementById("kpi-open-knockouts").textContent = openKnockOuts;
+      document.getElementById("kpi-affected-facilities").textContent = `across ${affectedFacilitiesSet.size} facilities`;
+      document.getElementById("kpi-contested-count").textContent = relevantContestations.length;
+      document.getElementById("kpi-verified-count").textContent = `${verifiedCount} verified • ${pendingCount} pending`;
+      document.getElementById("kpi-compliance-rate").textContent = `${rate}%`;
+      document.getElementById("kpi-compliance-bar").style.width = `${rate}%`;
+
+      document.getElementById("kpi-top-medicine").textContent = MEDICINE_PARAMS[maxIdx].short;
+      document.getElementById("kpi-top-medicine").title = MEDICINE_PARAMS[maxIdx].full;
+      document.getElementById("kpi-top-medicine-count").textContent = `${medKnockOutCounts[maxIdx]} facilities missing`;
+      document.getElementById("active-filter-label").textContent = `Showing ${filtered.length} of ${RAW_FACILITIES.length} facilities`;
+    }
+
+    function updateCharts(filtered) {
+      const regions = ["Mirpurkhas", "Sukkur", "Larkana", "SBA", "Karachi", "Hyderabad"];
+      const regOpenKO = regions.map(reg => {
+        let sum = 0;
+        RAW_FACILITIES.filter(f => f.r === reg).forEach(f => {
+          f.s.forEach((st, idx) => {
+            if (st === "✖" && !contestations.some(c => c.facilityCode === f.c && c.paramIndex === idx)) sum++;
+          });
+        });
+        return sum;
+      });
+      const regContested = regions.map(reg => {
+        return contestations.filter(c => c.region === reg).length;
+      });
+
+      // 1. Regional Stacked Bar Chart
+      const ctxReg = document.getElementById("chart-regions").getContext("2d");
+      if (regionChart) regionChart.destroy();
+      regionChart = new Chart(ctxReg, {
+        type: "bar",
+        data: {
+          labels: regions,
+          datasets: [
+            {
+              label: "Open Knock-Outs (✖)",
+              data: regOpenKO,
+              backgroundColor: "#e11d48",
+              borderRadius: 5
+            },
+            {
+              label: "Contested (In Compliance)",
+              data: regContested,
+              backgroundColor: "#f59e0b",
+              borderRadius: 5
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } }
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+            y: { stacked: true, beginAtZero: true, ticks: { font: { size: 11 } } }
+          }
+        }
+      });
+
+      // 2. Top 10 Knocked-Out Medicines Horizontal Bar
+      const medStats = MEDICINE_PARAMS.map((m, idx) => {
+        let open = 0;
+        filtered.forEach(f => {
+          if (f.s[idx] === "✖" && !contestations.some(c => c.facilityCode === f.c && c.paramIndex === idx)) {
+            open++;
+          }
+        });
+        return { label: m.short, count: open };
+      }).sort((a, b) => b.count - a.count).slice(0, 10);
+
+      const ctxMed = document.getElementById("chart-medicines").getContext("2d");
+      if (medicineChart) medicineChart.destroy();
+      medicineChart = new Chart(ctxMed, {
+        type: "bar",
+        data: {
+          labels: medStats.map(m => m.label),
+          datasets: [{
+            label: "Open Knock-Outs (✖)",
+            data: medStats.map(m => m.count),
+            backgroundColor: "#0f766e",
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { beginAtZero: true, ticks: { font: { size: 10 } } },
+            y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+          }
+        }
+      });
+
+      // 3. Parameter Breakdown Doughnut
+      let avail = 0, openKO = 0, contested = 0, na = 0;
+      filtered.forEach(f => {
+        f.s.forEach((st, idx) => {
+          if (st === "✔") avail++;
+          else if (st === "✖") {
+            if (contestations.some(c => c.facilityCode === f.c && c.paramIndex === idx)) contested++;
+            else openKO++;
+          } else na++;
+        });
+      });
+
+      const ctxBreak = document.getElementById("chart-breakdown").getContext("2d");
+      if (breakdownChart) breakdownChart.destroy();
+      breakdownChart = new Chart(ctxBreak, {
+        type: "doughnut",
+        data: {
+          labels: ["Available (✔)", "Open Knock-Out (✖)", "Contested", "Not Applicable (-)"],
+          datasets: [{
+            data: [avail, openKO, contested, na],
+            backgroundColor: ["#10b981", "#e11d48", "#f59e0b", "#cbd5e1"],
+            borderWidth: 2,
+            borderColor: "#ffffff"
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "62%",
+          plugins: {
+            legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10 } } }
+          }
+        }
+      });
+    }
+
+    function renderHeader() {
+      const tr = document.getElementById("table-header-row");
+      let html = `
+        <th class="py-3 px-3 sticky-col-1 bg-slate-100 border-r border-slate-200 min-w-[88px]">Code</th>
+        <th class="py-3 px-3 sticky-col-2 bg-slate-100 border-r border-slate-200 min-w-[200px]">Health Facility</th>
+        <th class="py-3 px-3 min-w-[105px]">Region</th>
+        <th class="py-3 px-3 min-w-[130px]">District</th>
+        <th class="py-3 px-3 min-w-[140px]">Transition</th>
+        <th class="py-3 px-3 min-w-[80px]">W.Status</th>
+        <th class="py-3 px-3 min-w-[125px]">Visit Date</th>
+        <th class="py-3 px-3 min-w-[125px] text-center">Contestation</th>
+      `;
+      MEDICINE_PARAMS.forEach((m, i) => {
+        html += `<th class="py-2.5 px-2 text-center min-w-[90px] border-l border-slate-200/80" title="${m.full}">
+          <div class="text-[10px] text-slate-400 font-normal">Item ${i + 1}</div>
+          <div class="leading-tight line-clamp-2">${m.short}</div>
+        </th>`;
+      });
+      tr.innerHTML = html;
+    }
+
+    function renderTable(filtered) {
+      const tbody = document.getElementById("table-body");
+      document.getElementById("badge-filtered-count").textContent = filtered.length;
+
+      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const startIdx = (currentPage - 1) * pageSize;
+      const endIdx = Math.min(startIdx + pageSize, filtered.length);
+      const pageItems = filtered.slice(startIdx, endIdx);
+
+      document.getElementById("pagination-info").textContent =
+        filtered.length === 0
+          ? "Showing 0 facilities"
+          : `Showing ${startIdx + 1} to ${endIdx} of ${filtered.length} facilities`;
+      document.getElementById("page-indicator").textContent = `Page ${currentPage} of ${totalPages}`;
+      document.getElementById("btn-prev-page").disabled = currentPage <= 1;
+      document.getElementById("btn-next-page").disabled = currentPage >= totalPages;
+
+      if (pageItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${8 + MEDICINE_PARAMS.length}" class="py-12 text-center text-slate-500 text-sm">No matching facility records found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = pageItems.map(f => {
+        const openIndices = [];
+        const contestedItems = contestations.filter(c => c.facilityCode === f.c);
+        f.s.forEach((st, idx) => {
+          if (st === "✖" && !contestedItems.some(c => c.paramIndex === idx)) {
+            openIndices.push(idx);
+          }
+        });
+
+        let actionCell = "";
+        if (openIndices.length > 0) {
+          actionCell = `
+            <button onclick="openContestationModal('${f.c}', ${openIndices[0]})" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[11px] shadow-2xs transition inline-flex items-center gap-1">
+              <span>Contest (${openIndices.length})</span>
+            </button>
+          `;
+        } else if (contestedItems.length > 0) {
+          actionCell = `
+            <button onclick="switchTab('compliance')" class="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold text-[11px] transition">
+              In Compliance (${contestedItems.length})
+            </button>
+          `;
+        } else {
+          actionCell = `<span class="text-[11px] font-semibold text-emerald-600">✓ Compliant</span>`;
+        }
+
+        const paramCells = f.s.map((st, idx) => {
+          const existingCont = contestations.find(c => c.facilityCode === f.c && c.paramIndex === idx);
+          if (existingCont) {
+            const isVerified = existingCont.complianceStatus === "Compliance Verified";
+            return `
+              <td onclick="switchTab('compliance')" title="Contested: ${existingCont.reason} (Click to inspect in Compliance)" class="py-2 px-2 text-center border-l border-slate-100 cursor-pointer ${isVerified ? 'bg-emerald-50/80' : 'bg-amber-50/90'}">
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${isVerified ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-200/80 text-amber-900'}">
+                  ${isVerified ? '✔ Verified' : '⏳ Contested'}
+                </span>
+              </td>
+            `;
+          }
+          if (st === "✔") {
+            return `<td class="py-2 px-2 text-center border-l border-slate-100 text-emerald-600 font-bold">✔</td>`;
+          }
+          if (st === "✖") {
+            return `
+              <td onclick="openContestationModal('${f.c}', ${idx})" title="Click to Contest Knocked-Out Parameter: ${MEDICINE_PARAMS[idx].full}" class="py-2 px-2 text-center border-l border-slate-100 bg-rose-50/60 hover:bg-rose-100 cursor-pointer transition">
+                <span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-rose-100 text-rose-700 font-bold">✖</span>
+              </td>
+            `;
+          }
+          return `<td class="py-2 px-2 text-center border-l border-slate-100 text-slate-400">-</td>`;
+        }).join("");
+
+        return `
+          <tr class="bg-white hover:bg-slate-50 transition group">
+            <td class="py-2.5 px-3 sticky-col-1 bg-white group-hover:bg-slate-50 border-r border-slate-200 font-mono font-semibold text-slate-700">${f.c}</td>
+            <td class="py-2.5 px-3 sticky-col-2 bg-white group-hover:bg-slate-50 border-r border-slate-200 font-semibold text-slate-900">${f.n}</td>
+            <td class="py-2.5 px-3 font-medium text-slate-700">${f.r}</td>
+            <td class="py-2.5 px-3 text-slate-600">${f.d}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap">${
+              String(f.t).trim() === "1"
+                ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold text-[11px]"><span class="font-mono font-bold">1</span> Newly Taken</span>`
+                : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 font-medium text-[11px]"><span class="font-mono font-bold">-</span> Existing</span>`
+            }</td>
+            <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">${f.w}</span></td>
+            <td class="py-2.5 px-3 text-slate-500 whitespace-nowrap">${f.v}</td>
+            <td class="py-2.5 px-3 text-center">${actionCell}</td>
+            ${paramCells}
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function changePageSize() {
+      pageSize = parseInt(document.getElementById("page-size").value, 10);
+      currentPage = 1;
+      renderTable(getFilteredFacilities());
+    }
+
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTable(getFilteredFacilities());
+      }
+    }
+
+    function nextPage() {
+      const totalPages = Math.ceil(getFilteredFacilities().length / pageSize);
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderTable(getFilteredFacilities());
+      }
+    }
+
+    // Modal Logic
+    function openContestationModal(facilityCode, preselectParamIdx = null) {
+      const facility = RAW_FACILITIES.find(f => f.c === facilityCode);
+      if (!facility) return;
+
+      activeFacilityCode = facilityCode;
+      selectedFiles = [];
+      document.getElementById("contestation-form").reset();
+      document.getElementById("modal-file-list").textContent = "";
+
+      document.getElementById("modal-facility-name").textContent = `${facility.n} (${facility.c})`;
+      document.getElementById("modal-region-district").textContent = `${facility.r} • ${facility.d}`;
+      const isNewHF = String(facility.t).trim() === "1";
+      document.getElementById("modal-transition-badge").innerHTML = isNewHF
+        ? `<span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-[11px]">1 — Newly Taken HF</span>`
+        : `<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-[11px]">- — Existing HF</span>`;
+      document.getElementById("modal-visit-date").textContent = facility.v;
+
+      const totalKO = facility.s.filter(s => s === "✖").length;
+      const uncontestedKO = [];
+      facility.s.forEach((st, idx) => {
+        if (st === "✖" && !contestations.some(c => c.facilityCode === facility.c && c.paramIndex === idx)) {
+          uncontestedKO.push({ idx, param: MEDICINE_PARAMS[idx] });
+        }
+      });
+
+      const subSelect = document.getElementById("modal-subparam-select");
+      subSelect.innerHTML = `<option value="">-- Select knocked-out sub-parameter --</option>` +
+        uncontestedKO.map(item => `<option value="${item.idx}">${item.param.full}</option>`).join("");
+
+      document.getElementById("modal-remaining-count").textContent =
+        `${uncontestedKO.length} of ${totalKO} knocked-out items left to contest`;
+
+      if (preselectParamIdx !== null && uncontestedKO.some(i => i.idx === preselectParamIdx)) {
+        subSelect.value = String(preselectParamIdx);
+      } else if (uncontestedKO.length === 1) {
+        subSelect.value = String(uncontestedKO[0].idx);
+      }
+
+      handleSubParamChange();
+
+      const modal = document.getElementById("contestation-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function handleSubParamChange() {
+      const subVal = document.getElementById("modal-subparam-select").value;
+      const reasonSelect = document.getElementById("modal-reason-select");
+      if (subVal === "") {
+        reasonSelect.innerHTML = `<option value="">-- Select a sub-parameter first --</option>`;
+        return;
+      }
+      reasonSelect.innerHTML = `<option value="">-- Select primary reason --</option>` +
+        CONTESTATION_REASONS.map(r => `<option value="${r}">${r}</option>`).join("");
+    }
+
+    function handleFileSelect(event) {
+      const files = Array.from(event.target.files).slice(0, 5);
+      selectedFiles = files.map(f => f.name);
+      document.getElementById("modal-file-list").textContent =
+        selectedFiles.length ? `Selected (${selectedFiles.length}): ${selectedFiles.join(", ")}` : "";
+    }
+
+    function closeModal() {
+      const modal = document.getElementById("contestation-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+      activeFacilityCode = null;
+    }
+
+    function submitContestation(event) {
+      event.preventDefault();
+      if (!activeFacilityCode) return;
+
+      const facility = RAW_FACILITIES.find(f => f.c === activeFacilityCode);
+      const paramIndex = parseInt(document.getElementById("modal-subparam-select").value, 10);
+      const reason = document.getElementById("modal-reason-select").value;
+      const officerName = document.getElementById("modal-officer-name").value.trim();
+      const officerRole = document.getElementById("modal-officer-role").value.trim();
+      const evidenceRef = document.getElementById("modal-evidence-ref").value.trim();
+      const remarks = document.getElementById("modal-remarks").value.trim();
+
+      const newEntry = {
+        id: "CNT-" + String(1001 + contestations.length),
+        facilityCode: facility.c,
+        facilityName: facility.n,
+        region: facility.r,
+        district: facility.d,
+        transition: String(facility.t).trim(),
+        visitDate: facility.v,
+        paramIndex,
+        medicineName: MEDICINE_PARAMS[paramIndex].full,
+        reason,
+        officerName,
+        officerRole,
+        evidenceRef: evidenceRef || "Not specified",
+        attachedFiles: [...selectedFiles],
+        remarks,
+        submittedAt: new Date().toLocaleString(),
+        complianceStatus: "Compliance Provided"
+      };
+
+      contestations.unshift(newEntry);
+      closeModal();
+      refreshAll();
+      renderComplianceTable();
+      showToast(`Contestation ${newEntry.id} saved & routed to Compliance!`);
+    }
+
+    function renderComplianceTable() {
+      const emptyState = document.getElementById("compliance-empty-state");
+      const tableWrapper = document.getElementById("compliance-table-wrapper");
+      const tbody = document.getElementById("compliance-tbody");
+      document.getElementById("badge-compliance-count").textContent = contestations.length;
+
+      if (contestations.length === 0) {
+        emptyState.classList.remove("hidden");
+        tableWrapper.classList.add("hidden");
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+      tableWrapper.classList.remove("hidden");
+
+      tbody.innerHTML = contestations.map((c, index) => {
+        const isVerified = c.complianceStatus === "Compliance Verified";
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-3.5 px-4 font-mono font-bold text-slate-900">${c.id}</td>
+            <td class="py-3.5 px-4">
+              <div class="font-bold text-slate-900">${c.facilityName} (${c.facilityCode})</div>
+              <div class="text-[11px] text-slate-500">${c.region} • ${c.district} • <span class="font-semibold ${c.transition === '1' ? 'text-indigo-600' : 'text-slate-600'}">${c.transition === '1' ? 'Newly Taken (1)' : 'Existing (-)'}</span></div>
+            </td>
+            <td class="py-3.5 px-4">
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-rose-50 text-rose-700 font-semibold border border-rose-200">
+                ${c.medicineName}
+              </span>
+            </td>
+            <td class="py-3.5 px-4 font-semibold text-slate-800">${c.reason}</td>
+            <td class="py-3.5 px-4">
+              <div class="font-semibold text-slate-900">${c.officerName}</div>
+              <div class="text-[11px] text-slate-500">${c.officerRole}</div>
+            </td>
+            <td class="py-3.5 px-4 max-w-xs">
+              <div class="text-slate-700 leading-relaxed">${c.remarks}</div>
+              <div class="text-[11px] text-teal-700 font-semibold mt-1">Ref: ${c.evidenceRef}</div>
+              ${c.attachedFiles.length ? `<div class="text-[11px] text-slate-500 mt-0.5">📎 ${c.attachedFiles.join(", ")}</div>` : ""}
+            </td>
+            <td class="py-3.5 px-4">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${isVerified ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                ${c.complianceStatus}
+              </span>
+              <div class="text-[10px] text-slate-400 mt-1">${c.submittedAt}</div>
+            </td>
+            <td class="py-3.5 px-4 text-right">
+              ${!isVerified ? `
+                <button onclick="verifyCompliance(${index})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] shadow-2xs transition">
+                  Verify Compliance
+                </button>
+              ` : `<span class="text-emerald-600 font-bold text-[11px]">✓ Verified</span>`}
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function verifyCompliance(index) {
+      contestations[index].complianceStatus = "Compliance Verified";
+      renderComplianceTable();
+      refreshAll();
+      showToast(`${contestations[index].id} marked as Compliance Verified.`);
+    }
+
+    function switchTab(tab) {
+      const btnAss = document.getElementById("tab-btn-assessment");
+      const btnComp = document.getElementById("tab-btn-compliance");
+      const viewAss = document.getElementById("view-assessment");
+      const viewComp = document.getElementById("view-compliance");
+      const filters = document.getElementById("assessment-filters");
+
+      if (tab === "assessment") {
+        btnAss.className = "pb-3.5 text-sm font-bold border-b-2 border-rose-600 text-rose-600 transition flex items-center gap-2";
+        btnComp.className = "pb-3.5 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-2";
+        viewAss.classList.remove("hidden");
+        viewComp.classList.add("hidden");
+        filters.classList.remove("hidden");
+      } else {
+        btnComp.className = "pb-3.5 text-sm font-bold border-b-2 border-rose-600 text-rose-600 transition flex items-center gap-2";
+        btnAss.className = "pb-3.5 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-2";
+        viewComp.classList.remove("hidden");
+        viewAss.classList.add("hidden");
+        filters.classList.add("hidden");
+        renderComplianceTable();
+      }
+    }
+
+    function exportComplianceCSV() {
+      const headers = ["Facility Code", "Region", "District", "W.Status", "Facility Name", "Transitioned", "Visit date & time"];
+      MEDICINE_PARAMS.forEach(m => {
+        headers.push(`"${m.full}"`, "Reason / Compliance Provided");
+      });
+
+      const rows = RAW_FACILITIES.map(f => {
+        const row = [f.c, `"${f.r}"`, `"${f.d}"`, `"${f.w}"`, `"${f.n}"`, `"${f.t}"`, `"${f.v}"`];
+        f.s.forEach((st, idx) => {
+          const cont = contestations.find(c => c.facilityCode === f.c && c.paramIndex === idx);
+          if (cont) {
+            row.push("Contested", `"${cont.reason} | Officer: ${cont.officerName} (${cont.officerRole}) | Ref: ${cont.evidenceRef} | Remarks: ${cont.remarks} | Status: ${cont.complianceStatus}"`);
+          } else {
+            row.push(st, "");
+          }
+        });
+        return row.join(",");
+      });
+
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "Justification_Sheet_Medicine_Compliance_255_Records.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toast-msg").textContent = msg;
+      toast.classList.remove("hidden");
+      toast.classList.add("flex");
+      setTimeout(() => {
+        toast.classList.add("hidden");
+        toast.classList.remove("flex");
+      }, 3500);
+    }
+
+    init();
+  </script>
+</body>
+</html>
